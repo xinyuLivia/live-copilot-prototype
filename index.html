@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实况智能体 · 原型 · Live Copilot</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --bg:#0a0d12; --panel:#12161d; --panel2:#171c25; --line:#232a35;
+    --txt:#e6ebf2; --sub:#8a95a5; --accent:#2f7bff; --accent2:#3b8cff;
+    --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+  }
+  html,body{ height:100%; }
+  body{ font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--txt); overflow:hidden; }
+
+  /* 顶部导航 */
+  .topbar{ height:36px; display:flex; align-items:center; gap:18px; padding:0 14px; background:#0c1017; border-bottom:1px solid var(--line); font-size:13px; }
+  .topbar .crumb{ color:var(--sub); } .topbar .crumb.active{ color:var(--accent2); }
+  .topbar .sep{ color:#3a4250; } .topbar .spacer{ flex:1; }
+  .topbar .dot{ width:22px;height:22px;border-radius:50%;background:#1b6df0;display:flex;align-items:center;justify-content:center;font-size:11px; }
+
+  .stage{ position:relative; height:calc(100vh - 36px); }
+
+  /* ---------- 左侧任务/告警列表（对齐真实产品） ---------- */
+  .side{ position:absolute; left:0; top:0; bottom:0; width:244px; background:var(--panel); border-right:1px solid var(--line);
+    display:flex; flex-direction:column; z-index:5; }
+  .side .task{ padding:10px 12px; border-bottom:1px solid var(--line); }
+  .side .task .nm{ font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .side .task .st{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--warn); margin-top:6px; }
+  .side .task .st .rt{ margin-left:auto; font-family:monospace; color:#cfd8e3; }
+  .side .alist{ flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:10px; }
+  .side .alist::-webkit-scrollbar{ width:5px; } .side .alist::-webkit-scrollbar-thumb{ background:#2a323e; border-radius:3px; }
+  .side .rtn{ padding:10px; border-top:1px solid var(--line); }
+  .side .rtn button{ width:100%; padding:9px; border-radius:7px; background:var(--panel2); border:1px solid var(--line); color:#cfd8e3; font-size:12.5px; cursor:pointer; }
+
+  /* 告警/检测卡 */
+  .acard{ background:var(--panel2); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .acard .ah{ display:flex; align-items:center; gap:6px; padding:8px 10px 0; font-size:12px; }
+  .acard .ah .dot2{ width:8px;height:8px;border-radius:50%;background:var(--ok); flex-shrink:0; }
+  .acard .ah .dot2.warn{ background:var(--warn); }
+  .acard .ah .stt{ margin-left:auto; font-size:10.5px; color:var(--sub); }
+  .acard .aim{ height:96px; margin:8px 10px 10px; border-radius:8px; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; font-size:26px; }
+  /* 「问智能体」= 图标按钮，悬浮显示文字（下沉到告警图上） */
+  .acard .aim .ask{ position:absolute; top:6px; right:6px; width:30px; height:30px; padding:0; border-radius:8px; z-index:3;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.15s;
+    background:rgba(47,123,255,.92); border:1px solid var(--accent2); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.45); }
+  .acard .aim .ask:hover{ background:var(--accent2); }
+  .acard .aim .ask svg{ width:16px; height:16px; }
+  .acard .aim .ask:hover:after{ content:'问智能体'; position:absolute; top:50%; right:calc(100% + 7px); transform:translateY(-50%);
+    white-space:nowrap; background:#0c1118; border:1px solid var(--line); color:#dbe4ef; font-size:11px; padding:3px 7px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+  .acard .aim .abox{ position:absolute; border:1.5px solid #ffb020; border-radius:3px; box-shadow:0 0 8px rgba(255,176,32,.5); }
+
+  /* ---------- 动态视频区（无人机在飞） ---------- */
+  .video-area{ position:absolute; left:244px; right:0; top:0; bottom:150px; overflow:hidden;
+    background:linear-gradient(180deg,#0e131a 0%, #0a0e14 100%); }
+  .sky{ position:absolute; left:-10%; right:-10%; top:-6%; bottom:-6%;
+    background:
+      radial-gradient(1000px 420px at 55% -12%, #17324d 0%, transparent 60%),
+      linear-gradient(180deg,#0e131a 0%, #0a0e14 100%);
+    animation:hover 6s ease-in-out infinite; }         /* 悬停微晃 */
+  @keyframes hover{ 0%,100%{transform:translate(0,0);} 50%{transform:translate(-6px,4px);} }
+
+  /* 地面透视 + 向前飞的滚动 */
+  .ground{ position:absolute; left:-20%; right:-20%; top:44%; bottom:-10%;
+    background:
+      repeating-linear-gradient(0deg,#1d222b 0 60px,#191e26 60px 120px);
+    transform:perspective(420px) rotateX(62deg); transform-origin:top center;
+    animation:forward 3.2s linear infinite; }
+  @keyframes forward{ from{background-position:0 0;} to{background-position:0 120px;} } /* 地面向后滚=向前飞 */
+  .road{ position:absolute; left:38%; right:38%; top:44%; bottom:0;
+    background:linear-gradient(180deg,#2a2f38,#20242c);
+    transform:perspective(420px) rotateX(62deg); transform-origin:top center; }
+  .lane{ position:absolute; left:50%; top:46%; width:4px; height:56%; transform:translateX(-50%);
+    background:repeating-linear-gradient(#f2c94c 0 22px, transparent 22px 46px); opacity:.55;
+    animation:dash 0.7s linear infinite; }
+  @keyframes dash{ from{background-position:0 0;} to{background-position:0 68px;} }
+
+  /* 侧楼向外飘（视差=向前飞） */
+  .bldg{ position:absolute; border-radius:3px 3px 0 0; background:linear-gradient(180deg,#22323f,#16222e);
+    box-shadow:inset 0 0 0 1px #263647; }
+  .bl-left{ left:6%; animation:driftL 5s linear infinite; }
+  .bl-right{ right:6%; animation:driftR 5s linear infinite; }
+  @keyframes driftL{ from{transform:translate(0,-30px) scale(.85);opacity:.5;} to{transform:translate(-90px,80px) scale(1.3);opacity:0;} }
+  @keyframes driftR{ from{transform:translate(0,-30px) scale(.85);opacity:.5;} to{transform:translate(90px,80px) scale(1.3);opacity:0;} }
+
+  /* 移动的车 */
+  .car{ position:absolute; height:14px; border-radius:3px; background:#8fa6c2; box-shadow:0 0 6px rgba(0,0,0,.4); }
+  .car.c1{ width:30px; top:60%; left:-8%; animation:run1 4s linear infinite; }
+  .car.c2{ width:26px; top:66%; left:-8%; animation:run1 5.2s linear infinite 1s; }
+  .car.c3{ width:34px; top:72%; right:-8%; animation:run2 4.6s linear infinite .5s; background:#c2b28f; }
+  @keyframes run1{ from{transform:translateX(0) scale(.7);opacity:.5;} to{transform:translateX(60vw) scale(1.25);opacity:1;} }
+  @keyframes run2{ from{transform:translateX(0) scale(.7);opacity:.5;} to{transform:translateX(-60vw) scale(1.25);opacity:1;} }
+
+  /* HUD 叠层 */
+  .hud{ position:absolute; inset:0; pointer-events:none; }
+  .cross{ position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); width:44px; height:44px;
+    border:1px solid rgba(120,180,255,.5); border-radius:50%; }
+  .cross:before,.cross:after{ content:''; position:absolute; background:rgba(120,180,255,.5); }
+  .cross:before{ left:50%; top:-8px; width:1px; height:60px; transform:translateX(-50%); }
+  .cross:after{ top:50%; left:-8px; height:1px; width:60px; transform:translateY(-50%); }
+  .video-tag{ position:absolute; top:10px; left:12px; font-size:12px; color:#9fb0c6; background:rgba(0,0,0,.4); padding:3px 8px; border-radius:4px; }
+  .rec{ position:absolute; top:10px; right:14px; display:flex; align-items:center; gap:6px; font-size:12px; color:#cfd8e3; }
+  .rec .r{ width:8px;height:8px;border-radius:50%;background:var(--danger); animation:blink 1.2s infinite; }
+  @keyframes blink{ 50%{opacity:.25;} }
+  .hud-bl{ position:absolute; bottom:10px; left:12px; font-size:11px; color:#8fa0b5; font-family:monospace; line-height:1.6; text-shadow:0 1px 2px #000; }
+  .hud-br{ position:absolute; bottom:10px; right:12px; font-size:11px; color:#8fa0b5; font-family:monospace; text-align:right; line-height:1.6; text-shadow:0 1px 2px #000; }
+
+  /* 抓帧：仅扫描线 + 短暂"抓取中"标签，画面持续飞行不暂停 */
+  .freeze-tag{ position:absolute; top:38px; left:12px; font-size:12px; color:#bfe0ff; background:rgba(47,123,255,.25);
+    border:1px solid rgba(47,123,255,.5); padding:3px 8px; border-radius:4px; opacity:0; transition:.25s; }
+  .video-area.capturing .freeze-tag{ opacity:1; }
+  .scanline{ position:absolute; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,#5b9bff,transparent);
+    box-shadow:0 0 12px #5b9bff; opacity:0; }
+  .scanline.run{ animation:scan .9s ease-in-out; }
+  @keyframes scan{ 0%{top:0;opacity:1;} 100%{top:100%;opacity:0;} }
+
+  /* 检测框（仅冻结帧上出现） */
+  .boxes{ position:absolute; inset:0; opacity:0; transition:opacity .3s; pointer-events:none; }
+  .boxes.show{ opacity:1; }
+  .bbox{ position:absolute; border:1.5px solid var(--accent2); border-radius:3px; box-shadow:0 0 8px rgba(47,123,255,.5); }
+  .bbox.person{ border-color:#ffb020; box-shadow:0 0 8px rgba(255,176,32,.5); }
+  .bbox .lbl{ position:absolute; top:-16px; left:-1px; font-size:10px; padding:1px 4px; background:var(--accent2); color:#fff; border-radius:3px 3px 3px 0; white-space:nowrap; }
+  .bbox.person .lbl{ background:#ffb020; color:#231a00; }
+
+  /* 二阶段航线示意 */
+  .flightpath{ position:absolute; inset:0; opacity:0; transition:opacity .4s; pointer-events:none; }
+  .flightpath.show{ opacity:1; }
+
+  /* 画面上的取证/分析入口（录10s、问画面）——下沉到画面，随抽屉打开左移，避免被对话框遮挡 */
+  .vidtools{ position:absolute; top:12px; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:16; transition:transform .28s ease; }
+  body.drawer-open .vidtools{ transform:translateX(calc(-50% - 195px)); }   /* 抽屉宽390，居中到可见区，避让 */
+  .vidtools .vt{ display:flex; align-items:center; gap:6px; white-space:nowrap; font-size:12.5px; padding:8px 14px; border-radius:20px; cursor:pointer;
+    background:rgba(12,17,24,.78); border:1px solid var(--line); color:#dbe4ef; backdrop-filter:blur(4px); transition:.15s; box-shadow:0 4px 14px rgba(0,0,0,.35); }
+  .vidtools .vt:hover{ border-color:var(--accent); color:#fff; }
+  .vidtools .vt.rec{ border-color:rgba(239,68,68,.55); color:#ffd7d7; }
+  .vidtools .vt.rec:before{ content:''; width:8px;height:8px;border-radius:50%;background:var(--danger); animation:blink 1.2s infinite; }
+
+  /* 素材放大灯箱：告警图 / 分析帧 / 短视频缩略点击可打开 */
+  .lightbox{ position:absolute; inset:0; background:rgba(4,7,11,.82); z-index:80; display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px; backdrop-filter:blur(2px); }
+  .lightbox.on{ display:flex; }
+  .lightbox .lb-box{ position:relative; width:min(72%,720px); height:min(62%,440px); border-radius:14px; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; font-size:120px; border:1px solid #2b3543; box-shadow:0 24px 70px rgba(0,0,0,.6); }
+  .lightbox .lb-box .abox{ position:absolute; border:2px solid #ffb020; border-radius:4px; box-shadow:0 0 18px rgba(255,176,32,.6); }
+  .lightbox .lb-cap{ font-size:13px; color:#cfd8e3; }
+  .lightbox .lb-x{ position:absolute; top:16px; right:24px; font-size:30px; line-height:1; color:#cfd8e3; cursor:pointer; }
+  .lightbox .lb-x:hover{ color:#fff; }
+  .zoomable{ cursor:zoom-in; }
+
+  /* 底部飞控面板 */
+  .bottom{ position:absolute; left:244px; right:0; bottom:0; height:150px; background:var(--panel); border-top:1px solid var(--line); display:flex; flex-direction:column; }
+  .btabs{ display:flex; gap:20px; padding:8px 16px 0; font-size:13px; }
+  .btab{ color:var(--sub); padding-bottom:6px; cursor:pointer; } .btab.active{ color:var(--accent2); border-bottom:2px solid var(--accent2); }
+  .bbody{ flex:1; display:flex; align-items:center; gap:26px; padding:0 20px; }
+  .params{ display:grid; grid-template-columns:repeat(4,auto); gap:6px 26px; font-size:12px; }
+  .params .k{ color:var(--sub); } .params .v{ color:#cfd8e3; margin-left:4px; }
+  .ptz{ display:grid; grid-template-columns:repeat(3,26px); grid-template-rows:repeat(2,24px); gap:3px; }
+  .ptz div{ background:var(--panel2); border:1px solid var(--line); border-radius:4px; font-size:11px; display:flex;align-items:center;justify-content:center;color:#9fb0c6; }
+  .ctrls{ display:flex; gap:10px; margin-left:auto; }
+  .cbtn{ background:var(--panel2); border:1px solid var(--line); color:#cfd8e3; font-size:12px; padding:8px 12px; border-radius:6px; cursor:pointer; }
+  .cbtn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  /* 悬浮球 */
+  .fab{ position:absolute; right:22px; bottom:170px; width:56px; height:56px; border-radius:50%;
+    background:linear-gradient(135deg,#2f7bff,#5b9bff); cursor:pointer; z-index:30; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 20px rgba(47,123,255,.45); transition:transform .2s, opacity .2s; }
+  .fab:hover{ transform:scale(1.06); } .fab svg{ width:26px; height:26px; }
+  .fab .ripple{ position:absolute; inset:0; border-radius:50%; border:2px solid #5b9bff; animation:ripple 2s infinite; }
+  @keyframes ripple{ 0%{transform:scale(1);opacity:.6;} 100%{transform:scale(1.7);opacity:0;} }
+  .fab .badge{ position:absolute; top:-2px; right:-2px; min-width:18px; height:18px; padding:0 5px; background:var(--danger); border-radius:9px; font-size:11px; color:#fff; display:flex; align-items:center; justify-content:center; border:2px solid var(--bg); }
+  .fab.hidden{ opacity:0; pointer-events:none; transform:scale(.6); }
+
+  /* 对话面板 */
+  .panel{ position:absolute; right:0; top:0; bottom:0; width:390px; z-index:40; background:var(--panel); border-left:1px solid var(--line);
+    display:flex; flex-direction:column; transform:translateX(100%); transition:transform .28s ease; box-shadow:-8px 0 30px rgba(0,0,0,.4); }
+  .panel.open{ transform:translateX(0); }
+  .phead{ display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line); }
+  .phead .ic{ width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2f7bff,#5b9bff); display:flex;align-items:center;justify-content:center; }
+  .phead .ic svg{ width:16px;height:16px; }
+  .phead .t{ font-size:14px; font-weight:600; } .phead .s{ font-size:11px; color:var(--sub); }
+  .phead .x{ margin-left:auto; color:var(--sub); cursor:pointer; font-size:18px; padding:4px 8px; } .phead .x:hover{ color:#fff; }
+  .msgs{ flex:1; min-height:0; overflow-y:auto; padding:14px 14px 20px; display:flex; flex-direction:column; gap:12px; }
+  .msgs>*{ flex-shrink:0; }   /* 关键：禁止子项被 flex 压扁裁切，溢出交给滚动条 */
+  .msgs::-webkit-scrollbar{ width:6px; } .msgs::-webkit-scrollbar-thumb{ background:#2a323e; border-radius:3px; }
+  .greet{ font-size:12.5px; color:var(--sub); line-height:1.7; background:var(--panel2); padding:12px; border-radius:10px; border:1px solid var(--line); }
+  .greet b{ color:var(--txt); }
+  .bubble{ max-width:88%; font-size:13px; line-height:1.6; padding:9px 12px; border-radius:12px; }
+  .bubble.user{ align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:3px; }
+  .bubble.bot{ align-self:flex-start; background:var(--panel2); border:1px solid var(--line); border-bottom-left-radius:3px; }
+  .typing{ align-self:flex-start; display:flex; gap:4px; padding:12px; }
+  .typing i{ width:6px;height:6px;border-radius:50%;background:var(--sub); animation:tp 1.2s infinite; }
+  .typing i:nth-child(2){ animation-delay:.2s; } .typing i:nth-child(3){ animation-delay:.4s; }
+  @keyframes tp{ 0%,60%,100%{transform:translateY(0);opacity:.4;} 30%{transform:translateY(-4px);opacity:1;} }
+
+  .card{ align-self:flex-start; width:88%; background:var(--panel2); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .card .shot{ height:96px; background:linear-gradient(135deg,#1b2a3a,#12202c); position:relative; display:flex; align-items:center; justify-content:center; font-size:11px; color:#5d6d80; }
+  .card .shot .miniboxes i{ position:absolute; border:1.5px solid var(--accent2); border-radius:2px; }
+  .card .shot .miniboxes i.p{ border-color:#ffb020; }
+  .card .shot .stamp{ position:absolute; bottom:4px; right:6px; font-size:10px; color:#9fb0c6; background:rgba(0,0,0,.4); padding:1px 5px; border-radius:3px; }
+  .card .body{ padding:10px 12px; }
+  .card .sum{ font-size:13px; margin-bottom:8px; line-height:1.5; }
+  .metrics{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .metric{ background:#0e141c; border:1px solid var(--line); border-radius:8px; padding:6px 10px; text-align:center; min-width:56px; }
+  .metric .n{ font-size:18px; font-weight:700; color:var(--accent2); } .metric .n.warn{ color:var(--warn); } .metric .n.ok{ color:var(--ok); }
+  .metric .l{ font-size:10px; color:var(--sub); margin-top:1px; }
+  .conf{ font-size:11px; color:var(--sub); display:flex; align-items:center; gap:6px; }
+  .conf .bar{ flex:1; height:4px; background:#0e141c; border-radius:2px; overflow:hidden; } .conf .bar i{ display:block; height:100%; background:var(--ok); }
+  .conf.low .bar i{ background:var(--warn); }
+  .card .acts{ display:flex; gap:8px; padding:0 12px 12px; }
+  .card .acts button{ flex:1; font-size:11px; padding:6px; border-radius:6px; cursor:pointer; background:#0e141c; border:1px solid var(--line); color:#cfd8e3; }
+  .card .acts button.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .lowtip{ font-size:11px; color:var(--warn); background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); padding:6px 8px; border-radius:6px; margin-bottom:8px; }
+
+  .plan{ align-self:flex-start; width:92%; background:var(--panel2); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .plan .ph{ padding:10px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; }
+  .plan .ph .badge{ font-size:10px; padding:2px 7px; border-radius:10px; background:rgba(47,123,255,.15); color:var(--accent2); }
+  .plan .ph .badge.blocked{ background:rgba(239,68,68,.15); color:#ff8080; }
+  .plan .ph .ttl{ font-size:12.5px; font-weight:600; }
+  .steps{ padding:8px 12px; }
+  .step{ display:flex; gap:10px; padding:6px 0; font-size:12.5px; align-items:flex-start; }
+  .step .idx{ width:20px; height:20px; border-radius:50%; background:#0e141c; border:1px solid var(--line); display:flex;align-items:center;justify-content:center; font-size:11px; color:var(--accent2); flex-shrink:0; }
+  .step .dsc{ line-height:1.5; } .step .dsc small{ color:var(--sub); display:block; font-size:11px; }
+  .safety{ margin:0 12px 10px; padding:8px 10px; border-radius:8px; font-size:11.5px; line-height:1.6; }
+  .safety.ok{ background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.25); color:#a7f3c0; }
+  .safety.bad{ background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.3); color:#ffb3b3; }
+  .plan .acts{ display:flex; gap:8px; padding:0 12px 12px; }
+  .plan .acts button{ flex:1; font-size:12px; padding:8px; border-radius:7px; cursor:pointer; border:1px solid var(--line); background:#0e141c; color:#cfd8e3; }
+  .plan .acts button.go{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .plan .acts button:disabled{ opacity:.4; cursor:not-allowed; }
+  .runbar{ margin:0 12px 10px; height:5px; background:#0e141c; border-radius:3px; overflow:hidden; display:none; }
+  .runbar i{ display:block; height:100%; width:0; background:var(--accent2); transition:width .4s; }
+
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; padding:8px 14px 0; }
+  .chip{ font-size:12px; padding:6px 10px; border-radius:14px; background:var(--panel2); border:1px solid var(--line); color:#cfd8e3; cursor:pointer; }
+  .chip:hover{ border-color:var(--accent); color:#fff; }
+  .inputbar{ display:flex; align-items:center; gap:8px; padding:12px 14px; border-top:1px solid var(--line); }
+  .inputbar input{ flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--txt); padding:10px 12px; border-radius:20px; font-size:13px; outline:none; }
+  .inputbar input:focus{ border-color:var(--accent); }
+  .inputbar .mic,.inputbar .send{ width:38px; height:38px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .inputbar .mic{ background:var(--panel2); border:1px solid var(--line); } .inputbar .send{ background:var(--accent); }
+  .inputbar svg{ width:18px; height:18px; }
+  .toast{ position:absolute; bottom:20px; left:50%; transform:translateX(-50%) translateY(20px); background:#1b2330; border:1px solid var(--line); color:#e6ebf2; padding:10px 18px; border-radius:8px; font-size:13px; opacity:0; transition:.3s; z-index:60; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* 当前分析对象指示条（对象在画面/左侧选定后回显） */
+  .ctx{ display:flex; align-items:center; gap:8px; margin:8px 14px 0; padding:7px 10px; border-radius:8px;
+    background:rgba(47,123,255,.12); border:1px solid var(--accent); font-size:12px; color:#bcd6ff; }
+  .ctx.hide{ display:none; }
+  .ctx .ctxlabel{ flex:1; }
+  .ctx .ctxx{ cursor:pointer; color:#9fb0c6; padding:0 4px; } .ctx .ctxx:hover{ color:#fff; }
+
+  /* 录制遮罩 */
+  .recording{ position:absolute; inset:0; background:rgba(6,9,14,.55); display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; z-index:20; }
+  .recording.on{ display:flex; }
+  .recording .recdot{ width:12px;height:12px;border-radius:50%;background:var(--danger); animation:blink 1s infinite; position:absolute; top:14px; left:50%; transform:translateX(-50%); }
+  .recording .rectext{ font-size:16px; color:#fff; letter-spacing:1px; }
+  .recring svg{ width:64px; height:64px; transform:rotate(-90deg); }
+  .recring circle{ fill:none; stroke:#5b9bff; stroke-width:3; stroke-linecap:round; stroke-dasharray:126; stroke-dashoffset:0; transition:stroke-dashoffset .95s linear; }
+
+  /* 视频/告警 结论卡增强 */
+  .card .shot.clip{ background:linear-gradient(135deg,#152233,#0f1a26); }
+  .card .shot .play{ width:34px;height:34px;border-radius:50%;background:rgba(47,123,255,.85); display:flex;align-items:center;justify-content:center; }
+  .card .shot .play:after{ content:''; border-left:11px solid #fff; border-top:7px solid transparent; border-bottom:7px solid transparent; margin-left:3px; }
+  .card .shot .dur{ position:absolute; bottom:4px; left:6px; font-size:10px; color:#cfe3ff; background:rgba(0,0,0,.5); padding:1px 5px; border-radius:3px; }
+  .timeline{ margin:2px 0 8px; border-left:2px solid var(--line); padding-left:10px; }
+  .tl{ position:relative; font-size:12px; line-height:1.5; padding:3px 0; color:#cfd8e3; }
+  .tl:before{ content:''; position:absolute; left:-15px; top:9px; width:7px;height:7px;border-radius:50%;background:var(--accent2); }
+  .tl b{ color:var(--accent2); font-family:monospace; }
+  .verdict{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .vtag{ font-size:11px; padding:3px 8px; border-radius:12px; background:#0e141c; border:1px solid var(--line); color:#cfd8e3; }
+  .vtag.bad{ color:#ffb3b3; border-color:rgba(239,68,68,.4); } .vtag.warn{ color:#ffd591; border-color:rgba(245,158,11,.4); } .vtag.ok{ color:#a7f3c0; border-color:rgba(34,197,94,.4); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="crumb">首页</span><span class="sep">/</span>
+  <span class="crumb">任务中心 ˅</span><span class="sep">/</span>
+  <span class="crumb active">任务实况</span>
+  <span class="spacer"></span>
+  <span style="font-size:12px;color:#8a95a5;" id="taskTag">任务执行中 · 1号光伏区巡检 · EVO Max 4T</span>
+  <span class="dot">✿</span>
+</div>
+
+<div class="stage">
+  <!-- 左侧：任务信息 + 告警/检测列表（真实产品布局） -->
+  <div class="side">
+    <div class="task">
+      <div class="nm">迎宾大道道路巡检任务2026… ˄</div>
+      <div class="st"><span>● 任务执行中</span></div>
+    </div>
+    <div class="alist" id="alarmList"></div>
+    <div class="rtn"><button>⤶ 一键返航</button></div>
+  </div>
+
+  <!-- 动态视频区 -->
+  <div class="video-area" id="videoArea">
+    <div class="sky"></div>
+    <div class="ground"></div>
+    <div class="road"></div>
+    <div class="lane"></div>
+    <div class="bldg bl-left"  style="width:70px;height:120px;"></div>
+    <div class="bldg bl-right" style="width:80px;height:140px;"></div>
+    <div class="car c1"></div><div class="car c2"></div><div class="car c3"></div>
+
+    <div class="hud">
+      <div class="cross"></div>
+      <div class="video-tag">📡 任务实时回传 · 广角 · 1080P/25fps</div>
+      <div class="hud-bl" id="hudCoord">LAT 31.8967° &nbsp; LNG 118.7841°<br>ALT 30.0m &nbsp; SPD 5.2m/s</div>
+      <div class="hud-br" id="hudMode">▶ AUTO 巡检中<br>航点 3/8</div>
+    </div>
+
+    <div class="scanline" id="scanline"></div>
+    <div class="freeze-tag">📸 已抓取分析帧（画面持续飞行）</div>
+
+    <!-- 录制 10s 遮罩 -->
+    <div class="recording" id="recording">
+      <div class="recdot"></div>
+      <div class="rectext">录制中 <span id="recCount">10</span>s</div>
+      <div class="recring"><svg viewBox="0 0 44 44"><circle id="recArc" cx="22" cy="22" r="20"/></svg></div>
+    </div>
+
+    <div class="boxes" id="boxes"></div>
+
+    <!-- 画面上仅保留「AI 看 10s」（录制并交 AI 时序理解）；当前帧问答直接在对话框输入即可 -->
+    <div class="vidtools">
+      <button class="vt rec" id="btnClip">AI 看 10s</button>
+    </div>
+
+    <div class="flightpath" id="flightpath">
+      <svg style="position:absolute;inset:0;width:100%;height:100%;">
+        <path d="M 80 120 C 300 60, 500 200, 720 150" stroke="#5b9bff" stroke-width="2" fill="none" stroke-dasharray="6 5"/>
+        <circle cx="80" cy="120" r="6" fill="#22c55e"/><circle cx="720" cy="150" r="7" fill="#ef4444"/>
+        <text x="88" y="112" fill="#9fb0c6" font-size="12">当前位置</text>
+        <text x="632" y="140" fill="#ff9d9d" font-size="12">🎯 目标点</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- 底部飞控面板 -->
+  <div class="bottom">
+    <div class="btabs"><div class="btab active">飞行直播</div><div class="btab">任务信息</div></div>
+    <div class="bbody">
+      <div class="params">
+        <div><span class="k">相对起飞高度</span><span class="v" id="pAlt">30.0 m</span></div>
+        <div><span class="k">水平速度</span><span class="v" id="pSpd">5.2 m/s</span></div>
+        <div><span class="k">电量</span><span class="v">95%</span></div>
+        <div><span class="k">剩余飞行</span><span class="v">14min 40s</span></div>
+        <div><span class="k">俯仰角度</span><span class="v">179.6°</span></div>
+        <div><span class="k">垂直速度</span><span class="v">0.0 m/s</span></div>
+        <div><span class="k">卫星</span><span class="v">18 颗</span></div>
+        <div><span class="k">任务进度</span><span class="v">航点 3/8</span></div>
+      </div>
+      <div class="ptz"><div></div><div>↑</div><div></div><div>←</div><div>⟳</div><div>→</div></div>
+      <div class="ctrls"><button class="cbtn primary">⏸ 暂停任务</button><button class="cbtn">返航</button></div>
+    </div>
+  </div>
+
+  <!-- 悬浮球 -->
+  <div class="fab" id="fab" title="打开实况智能体">
+    <span class="ripple"></span><span class="badge" id="fabBadge" style="display:none;">1</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+  </div>
+
+  <!-- 对话面板 -->
+  <div class="panel" id="panel">
+    <div class="phead">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v1H7a2 2 0 0 0-2 2v3a5 5 0 0 0 5 5h4a5 5 0 0 0 5-5V8a2 2 0 0 0-2-2h-2V5a3 3 0 0 0-3-3z"/><circle cx="9" cy="11" r="1" fill="#fff"/><circle cx="15" cy="11" r="1" fill="#fff"/></svg></div>
+      <div><div class="t">实况智能体</div><div class="s" id="subStatus">Live Copilot · 已连接任务画面</div></div>
+      <span class="x" id="closeBtn">×</span>
+    </div>
+    <div class="msgs" id="msgs">
+      <div class="greet" id="greet">
+        你好，我是 <b>实况智能体</b>。当前正在回传 <b>迎宾大道道路巡检</b> 任务画面。<br>
+        直接<b>问画面</b>（如"有多少辆车""堵不堵""有没有安全隐患"），或直接<b>下达飞行指令</b>（如"飞到前方路口放大看清"）——我会自动判断，给出研判结论或可执行的任务计划。<br>
+        也可分析 <b>🎬 10s 短视频</b>（点画面上的「AI 看 10s」）和 <b>🚨 告警图</b>（点左侧告警卡上的「问智能体」）。👇<br>
+        <span style="color:#6b7787;font-size:11.5px;">ⓘ 本对话仅属于你本人 + 当前任务，其他用户/任务不可见；任务结束或切换后不保留。</span>
+      </div>
+    </div>
+    <div class="ctx hide" id="ctx">
+      <span class="ctxlabel">📷 分析对象：当前帧</span>
+      <span class="ctxx" id="ctxClear" title="改回当前帧">✕</span>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="inputbar">
+      <input id="input" placeholder="问画面，或直接下达飞行指令…" autocomplete="off">
+      <button class="mic" title="语音输入"><svg viewBox="0 0 24 24" fill="none" stroke="#9fb0c6" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg></button>
+      <button class="send" id="sendBtn" title="发送"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+    </div>
+  </div>
+
+  <!-- 素材放大灯箱 -->
+  <div class="lightbox" id="lightbox">
+    <span class="lb-x">×</span>
+    <div class="lb-box" id="lbBox"></div>
+    <div class="lb-cap" id="lbCap"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const fab=$('#fab'), panel=$('#panel'), msgs=$('#msgs'), input=$('#input'), chips=$('#chips'),
+      boxes=$('#boxes'), flightpath=$('#flightpath'), videoArea=$('#videoArea'),
+      scanline=$('#scanline'), subStatus=$('#subStatus'), fabBadge=$('#fabBadge'), hudMode=$('#hudMode'),
+      ctx=$('#ctx'), recording=$('#recording');
+let target='frame', currentAlarm=null, clipReady=false, frameLocked=false;
+
+/* ---- 让 HUD 数字动起来，制造"在飞"的感觉 ---- */
+let baseLat=31.8967, baseLng=118.7841;
+setInterval(()=>{
+  baseLat+=0.00004; baseLng+=0.00003;
+  const spd=(4.6+Math.random()*1.4).toFixed(1);
+  $('#hudCoord').innerHTML=`LAT ${baseLat.toFixed(4)}° &nbsp; LNG ${baseLng.toFixed(4)}°<br>ALT 30.0m &nbsp; SPD ${spd}m/s`;
+  $('#pSpd').textContent=spd+' m/s';
+},1000);
+
+// 单入口：常用问题混合"问答 + 飞行指令"，让用户在同一处自然发现两种能力（不分 tab）
+const CHIPS = {
+  frame: ['画面里有多少辆车？','这个路口堵不堵？','有没有安全隐患？','飞到前方路口放大看清','启动A区例行航线，完成后返航入巢'],
+  clip:  ['这10秒过了几辆车？','那个人往哪个方向走了？','这段里有没有异常事件？'],
+  alarm: ['这条告警是误报吗？','严重程度如何？','建议怎么处置？']
+};
+function renderChips(){
+  chips.innerHTML='';
+  CHIPS[target].forEach(t=>{ const c=document.createElement('div'); c.className='chip'; c.textContent=t; c.onclick=()=>{ input.value=t; send(); }; chips.appendChild(c); });
+}
+function openPanel(){ panel.classList.add('open'); document.body.classList.add('drawer-open'); fab.classList.add('hidden'); fabBadge.style.display='none'; }
+function closePanel(){ panel.classList.remove('open'); document.body.classList.remove('drawer-open'); fab.classList.remove('hidden'); }
+fab.onclick=openPanel; $('#closeBtn').onclick=closePanel;
+
+/* 单入口：不再有"洞察/操控"两个 tab —— 洞察与操控是内部能力划分，对用户透明，按输入意图自动路由 */
+const PILOT_RE=/飞到|飞往|前往|导航|起飞|返航|降落|入巢|云台|变焦|放大|录像|拍照|盘旋|悬停|航线|例行|巡航|搜索|禁飞|机场|军事/;
+function isPilot(q){ return PILOT_RE.test(q); }
+
+/* ---- 当前分析对象（由画面/左侧列表选定后回显，非在对话框里选） ---- */
+const PLACE = { frame:'问画面，或直接下达飞行指令…', clip:'问这段 10 秒视频…', alarm:'就这张告警图提问…' };
+function setTarget(t){
+  target=t;
+  if(t==='frame'){ updateFrameCtx(); }
+  else {
+    ctx.classList.remove('hide');
+    ctx.querySelector('.ctxlabel').textContent =
+      t==='clip' ? '🎬 分析对象：10s 短视频片段'
+                 : '🚨 分析对象：'+(currentAlarm?currentAlarm.name+'告警图':'告警图');
+    ctx.querySelector('.ctxx').title='退回当前帧';
+    input.placeholder = PLACE[t];
+  }
+  renderChips();
+}
+/* 首次问画面→抓帧并锁定；锁定态回显于指示条，追问基于同一帧 */
+function lockFrame(){ frameLocked=true; updateFrameCtx(); }
+function updateFrameCtx(){
+  if(target!=='frame') return;
+  if(frameLocked){
+    ctx.classList.remove('hide');
+    ctx.querySelector('.ctxlabel').textContent='🔒 已锁定分析帧（追问基于此帧）';
+    ctx.querySelector('.ctxx').title='解除锁定（下次提问重新截帧）';
+    input.placeholder='追问这一帧…';
+  } else {
+    ctx.classList.add('hide');
+    input.placeholder=PLACE.frame;
+  }
+}
+$('#ctxClear').onclick=()=>{
+  if(target==='frame' && frameLocked){ frameLocked=false; unfreeze(); updateFrameCtx(); toast('已解除锁定，下次提问将重新截取当前帧'); return; }
+  currentAlarm=null; clipReady=false; frameLocked=false; setTarget('frame'); unfreeze();
+};
+
+/* ---- 画面上的入口：仅「录 10s」（时序理解）；当前帧问答直接在对话框输入 ---- */
+$('#btnClip').onclick=()=>{ openPanel(); currentAlarm=null; startRecording(); };
+
+/* ---- 录制 10s 短视频 ---- */
+function startRecording(pendingQ){
+  setTarget('clip'); unfreeze();
+  recording.classList.add('on');
+  const arc=$('#recArc'), cnt=$('#recCount'); let n=10;
+  cnt.textContent=n; arc.style.strokeDashoffset='0';
+  const iv=setInterval(()=>{
+    n--; cnt.textContent=Math.max(n,0); arc.style.strokeDashoffset=String(126*(10-n)/10);
+    if(n<=0){ clearInterval(iv);
+      recording.classList.remove('on'); clipReady=true;
+      const b=document.createElement('div'); b.className='card'; b.style.width='60%';
+      b.innerHTML=`<div class="shot clip"><div class="play"></div><span class="dur">🎬 10s 片段</span></div>`;
+      msgs.appendChild(b); scroll();
+      addBot('已录制 <b>10 秒</b> 片段。问我这段里发生了什么，比如"过了几辆车""人往哪走""有没有异常事件"。');
+      if(pendingQ){ addUser(pendingQ); const t=typing(); setTimeout(()=>{ t.remove(); clipRespond(pendingQ); },1200); }
+    }
+  }, 260);
+  toast('开始录制当前画面 10 秒…');
+}
+
+/* ---- 巡检实况识别出的告警/检测（渲染到左侧列表） ---- */
+const ROADGRAD='linear-gradient(135deg,#2a2f38,#1b2027)';
+const ALARMS = {
+  pothole:{name:'路面坑洼', icon:'🕳️', grad:ROADGRAD,
+    box:{x:38,y:44,w:70,h:34}, tags:[['类别·路面坑洼','warn'],['真实告警','bad'],['严重度·中','warn']],
+    sum:'该告警<b>为真</b>：车行道右侧有一处明显<b>坑洼</b>（约 0.4㎡），边缘破损、深度较深，存在行车安全隐患。建议生成<b>道路养护工单</b>并设临时警示。', conf:88},
+  crack:{name:'路面裂缝', icon:'〰️', grad:ROADGRAD,
+    box:{x:30,y:52,w:96,h:16}, tags:[['类别·路面裂缝','warn'],['真实告警','bad'],['严重度·低','ok']],
+    sum:'该告警<b>为真</b>：路面存在<b>纵向裂缝</b>，长约 3m、宽度较小，暂无明显沉降。建议列入日常养护巡查，非紧急。', conf:82},
+  spill:{name:'路面抛洒物', icon:'📦', grad:ROADGRAD,
+    box:{x:44,y:40,w:44,h:40}, tags:[['类别·抛洒物','warn'],['疑似·需复核','warn'],['严重度·中','warn']],
+    sum:'<b>疑似</b>车行道抛洒物（疑似纸箱/杂物），受角度与光照影响置信度偏低，建议人工复核后决定是否派员清理。', conf:63, low:true}
+};
+function renderSideAlarms(){
+  const wrap=$('#alarmList');
+  wrap.innerHTML=Object.entries(ALARMS).map(([k,a])=>`
+    <div class="acard">
+      <div class="ah"><span class="dot2 ${a.low?'warn':''}"></span>发现${a.name}<span class="stt">检测完成</span></div>
+      <div class="aim zoomable" data-k="${k}" title="点击放大" style="background:${a.grad}">${a.icon}<i class="abox" style="left:${a.box.x}%;top:${a.box.y}%;width:${a.box.w}px;height:${a.box.h}px;"></i><button class="ask" data-k="${k}" aria-label="问智能体"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></button></div>
+    </div>`).join('');
+  wrap.querySelectorAll('.ask').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); askAlarm(b.dataset.k); });
+  wrap.querySelectorAll('.aim').forEach(im=>im.onclick=()=>{ const a=ALARMS[im.dataset.k]; openLightbox({grad:a.grad,icon:a.icon,box:a.box,cap:'告警原图 · '+a.name}); });
+}
+/* 点左侧卡片「问智能体」→ 直接把该告警图发给智能体 */
+function askAlarm(k){
+  openPanel();
+  currentAlarm=ALARMS[k]; setTarget('alarm');
+  addUser('解读这条「'+currentAlarm.name+'」告警图');
+  const t=typing(); setTimeout(()=>{ t.remove(); alarmRespond(); }, 1100);
+}
+
+function scroll(){ const go=()=>{ msgs.scrollTop=msgs.scrollHeight; };
+  go(); requestAnimationFrame(()=>{ go(); requestAnimationFrame(go); }); setTimeout(go,120); }
+function addUser(t){ const b=document.createElement('div'); b.className='bubble user'; b.textContent=t; msgs.appendChild(b); scroll(); }
+function addBot(html){ const b=document.createElement('div'); b.className='bubble bot'; b.innerHTML=html; msgs.appendChild(b); scroll(); }
+function typing(){ const t=document.createElement('div'); t.className='typing'; t.innerHTML='<i></i><i></i><i></i>'; msgs.appendChild(t); scroll(); return t; }
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1800); }
+
+/* ---- 素材放大灯箱（告警图/分析帧/短视频点击打开） ---- */
+function openLightbox({grad,icon,box,cap}){
+  const b=$('#lbBox');
+  b.style.background=grad||'linear-gradient(135deg,#1b2a3a,#12202c)';
+  b.innerHTML=(icon||'')+(box?`<i class="abox" style="left:${box.x}%;top:${box.y}%;width:${box.w*2.4}px;height:${box.h*2.4}px;"></i>`:'');
+  $('#lbCap').textContent=cap||'';
+  $('#lightbox').classList.add('on');
+}
+$('#lightbox').onclick=e=>{ if(e.target.id==='lightbox'||e.target.classList.contains('lb-x')) $('#lightbox').classList.remove('on'); };
+
+/* ---- 抓帧：扫描线 + 短暂"已抓取"标签；画面持续飞行，不暂停 ---- */
+function captureFrame(cb){
+  videoArea.classList.add('capturing');
+  scanline.classList.remove('run'); void scanline.offsetWidth; scanline.classList.add('run');
+  setTimeout(()=>videoArea.classList.remove('capturing'), 1400);
+  setTimeout(cb, 950);
+}
+function unfreeze(){ videoArea.classList.remove('capturing'); boxes.classList.remove('show'); boxes.innerHTML=''; }
+let boxTimer=null;
+function drawBoxes(list){
+  boxes.innerHTML = list.map(b=>`<div class="bbox ${b.p?'person':''}" style="left:${b.x}%;top:${b.y}%;width:${b.w}px;height:${b.h}px;"><span class="lbl">${b.t}</span></div>`).join('');
+  boxes.classList.add('show');
+  clearTimeout(boxTimer);   // 画面在动：识别框闪现后淡出，避免与移动目标错位
+  boxTimer=setTimeout(()=>{ boxes.classList.remove('show'); }, 1800);
+}
+
+function insightCard({sum, metrics, conf, low, mini}){
+  const c=document.createElement('div'); c.className='card';
+  const boxesHtml=(mini||[]).map(m=>`<i class="${m.p?'p':''}" style="left:${m.x}%;top:${m.y}%;width:${m.w}px;height:${m.h}px;"></i>`).join('');
+  const metricHtml=metrics.map(m=>`<div class="metric"><div class="n ${m.cls||''}">${m.n}</div><div class="l">${m.l}</div></div>`).join('');
+  c.innerHTML=`<div class="shot zoomable"><span>📷 分析帧</span><div class="miniboxes">${boxesHtml}</div><span class="stamp">点击放大</span></div>
+    <div class="body">${low?'<div class="lowtip">⚠ 置信度较低，建议人工复核，暂不自动生成告警</div>':''}
+    <div class="sum">${sum}</div><div class="metrics">${metricHtml}</div>
+    <div class="conf ${low?'low':''}"><span>置信度</span><span class="bar"><i style="width:${conf}%"></i></span><span>${conf}%</span></div></div>`;
+  msgs.appendChild(c);
+  c.querySelector('.shot').onclick=()=>openLightbox({icon:'📷',cap:'分析帧'});
+  scroll();
+}
+
+function planCard(cfg){
+  const c=document.createElement('div'); c.className='plan';
+  const stepsHtml=cfg.steps.map((s,i)=>`<div class="step"><div class="idx">${i+1}</div><div class="dsc">${s.t}<small>${s.d}</small></div></div>`).join('');
+  c.innerHTML=`<div class="ph"><span class="badge ${cfg.blocked?'blocked':''}">${cfg.blocked?'安全校验未通过':'待确认执行'}</span><span class="ttl">${cfg.title}</span></div>
+    <div class="steps">${stepsHtml}</div><div class="safety ${cfg.blocked?'bad':'ok'}">${cfg.safety}</div>
+    <div class="runbar"><i></i></div>
+    <div class="acts"><button onclick="this.closest('.plan').remove(); toast('已取消任务')">取消</button>
+    <button class="go" ${cfg.blocked?'disabled':''} onclick="runTask(this)">✓ 确认执行</button></div>`;
+  msgs.appendChild(c); scroll();
+  if(!cfg.blocked) flightpath.classList.add('show');
+}
+function runTask(btn){
+  const plan=btn.closest('.plan');
+  plan.querySelector('.ph .badge').textContent='执行中…';
+  plan.querySelectorAll('.acts button').forEach(b=>b.disabled=true);
+  const bar=plan.querySelector('.runbar'), fill=plan.querySelector('.runbar i');
+  bar.style.display='block'; let p=0;
+  hudMode.innerHTML='▶ 执行指令任务<br>导航中…';
+  const iv=setInterval(()=>{ p+=20; fill.style.width=p+'%'; if(p>=100){ clearInterval(iv);
+    addBot('✅ 任务执行完成：已到达目标并完成取证，素材与结论已并入当前巡检任务报告；飞机继续原巡检任务。'); hudMode.innerHTML='▶ AUTO 巡检中<br>航点 3/8'; } },700);
+  toast('任务已下发，飞机开始执行（可随时接管/中止）');
+}
+
+/* 视频时序结论卡 */
+function clipCard({sum, timeline, metrics, conf}){
+  const c=document.createElement('div'); c.className='card';
+  const tl=timeline.map(e=>`<div class="tl"><b>${e.t}</b> · ${e.e}</div>`).join('');
+  const metricHtml=(metrics||[]).map(m=>`<div class="metric"><div class="n ${m.cls||''}">${m.n}</div><div class="l">${m.l}</div></div>`).join('');
+  c.innerHTML=`<div class="shot clip zoomable"><div class="play"></div><span class="dur">🎬 10s · 25fps</span><span class="stamp">点击播放</span></div>
+    <div class="body"><div class="sum">${sum}</div>
+    <div class="timeline">${tl}</div>
+    ${metricHtml?`<div class="metrics">${metricHtml}</div>`:''}
+    <div class="conf"><span>置信度</span><span class="bar"><i style="width:${conf}%"></i></span><span>${conf}%</span></div></div>`;
+  msgs.appendChild(c);
+  c.querySelector('.shot').onclick=()=>openLightbox({grad:'linear-gradient(135deg,#152233,#0f1a26)',icon:'🎬',cap:'10s 片段'});
+  scroll();
+}
+/* 告警解读卡 */
+function alarmCard(a){
+  const c=document.createElement('div'); c.className='card';
+  const tags=a.tags.map(t=>`<span class="vtag ${t[1]}">${t[0]}</span>`).join('');
+  c.innerHTML=`<div class="shot zoomable" style="background:${a.grad};font-size:30px;">${a.icon}<span class="stamp">告警原图 · 点击放大</span></div>
+    <div class="body">${a.low?'<div class="lowtip">⚠ 置信度较低，建议人工复核，暂不自动生成告警</div>':''}
+    <div class="verdict">${tags}</div>
+    <div class="sum">${a.sum}</div>
+    <div class="conf ${a.low?'low':''}"><span>置信度</span><span class="bar"><i style="width:${a.conf}%"></i></span><span>${a.conf}%</span></div></div>`;
+  msgs.appendChild(c);
+  c.querySelector('.shot').onclick=()=>openLightbox({grad:a.grad,icon:a.icon,box:a.box,cap:'告警原图 · '+a.name});
+  scroll();
+}
+
+function clipRespond(q){
+  if(/方向|走|移动|人/.test(q)){
+    clipCard({ sum:'这 10 秒内追踪到 <b>1 名行人</b>，整体<b>向东</b>移动约 12m，最终走向路口东侧人行道。',
+      timeline:[{t:'0–3s',e:'行人出现在画面中部，沿人行道行走'},{t:'4–7s',e:'持续向东，速度约 1.2m/s'},{t:'8–10s',e:'接近路口，进入东侧盲区'}],
+      metrics:[{n:'东',l:'移动方向'},{n:'~12m',l:'位移'},{n:1,l:'目标'}], conf:85 });
+  } else if(/异常|事件|聚集|打斗|闯/.test(q)){
+    clipCard({ sum:'这 10 秒内<b>未检测到打斗/聚集/闯入</b>等异常事件；人员车辆行为正常。',
+      timeline:[{t:'0–5s',e:'车辆正常通行，无急停/逆行'},{t:'5–10s',e:'人员正常行走，无聚集'}],
+      metrics:[{n:0,l:'异常事件',cls:'ok'}], conf:80 });
+  } else {
+    clipCard({ sum:'这 10 秒内共 <b>3 辆车经过</b>（东向西 2、西向东 1），另有 1 名行人向东移动；无异常事件。',
+      timeline:[{t:'0–4s',e:'2 辆车东向西驶过'},{t:'5–7s',e:'1 辆车西向东驶入'},{t:'6–10s',e:'1 名行人向东移动'}],
+      metrics:[{n:3,l:'车辆'},{n:1,l:'行人'},{n:0,l:'异常',cls:'ok'}], conf:83 });
+  }
+}
+function alarmRespond(){ if(currentAlarm) alarmCard(currentAlarm); }
+
+function frameRespond(q){
+  if(/车|辆|停车/.test(q)){
+    drawBoxes([{x:14,y:58,w:46,h:26,t:'车 0.91'},{x:24,y:66,w:52,h:30,t:'车 0.88'},{x:34,y:60,w:44,h:26,t:'车 0.85'},{x:10,y:74,w:50,h:30,t:'车 0.79'}]);
+    addBot('已抓取当前帧并完成识别：');
+    insightCard({ sum:'画面中共检测到 <b>12 辆车</b>：行驶 8、停放 4；附近停车场约剩 3 个空位。',
+      metrics:[{n:12,l:'车辆'},{n:8,l:'行驶'},{n:4,l:'停放'},{n:3,l:'空位',cls:'ok'}], conf:88,
+      mini:[{x:12,y:55,w:22,h:12},{x:30,y:60,w:24,h:13},{x:48,y:52,w:20,h:12},{x:20,y:72,w:24,h:13}] });
+    return true;
+  } else if(/人|行人/.test(q)){
+    drawBoxes([{x:44,y:60,w:16,h:34,t:'人 0.82',p:1},{x:52,y:66,w:16,h:32,t:'人 0.77',p:1}]);
+    addBot('已完成人员识别：');
+    insightCard({ sum:'画面中检测到 <b>5 人</b>，均在人行道，未见异常聚集。',
+      metrics:[{n:5,l:'行人'},{n:0,l:'聚集',cls:'ok'}], conf:82, mini:[{x:44,y:60,w:8,h:16,p:1},{x:52,y:64,w:8,h:15,p:1}] });
+    return true;
+  } else if(/堵|拥堵|车流|路口/.test(q)){
+    drawBoxes([{x:14,y:58,w:46,h:26,t:'车'},{x:24,y:66,w:52,h:30,t:'车'},{x:34,y:60,w:44,h:26,t:'车'}]);
+    addBot('针对当前路口的通行研判：');
+    insightCard({ sum:'当前路口 <b>轻度拥堵</b>：主干道东向西排队约 6 辆，通行基本正常，无长时间滞留。',
+      metrics:[{n:'轻度',l:'拥堵',cls:'warn'},{n:6,l:'排队'},{n:'东→西',l:'主车流'}], conf:79,
+      mini:[{x:12,y:55,w:22,h:12},{x:30,y:60,w:24,h:13},{x:48,y:52,w:20,h:12}] });
+    return true;
+  } else if(/隐患|危险|安全|翻|火|烟|安全帽|违/.test(q)){
+    drawBoxes([{x:44,y:60,w:16,h:34,t:'未戴帽 0.71',p:1},{x:52,y:66,w:16,h:32,t:'未戴帽 0.68',p:1}]);
+    addBot('已对画面做安全隐患扫描：');
+    insightCard({ sum:'发现 <b>1 项疑似隐患</b>：右侧 2 名人员未佩戴安全帽；未见明火/烟雾、未见翻越围栏。',
+      metrics:[{n:1,l:'疑似隐患',cls:'warn'},{n:2,l:'未戴帽',cls:'warn'},{n:0,l:'明火',cls:'ok'}], conf:71, low:true,
+      mini:[{x:44,y:60,w:8,h:16,p:1},{x:52,y:64,w:8,h:15,p:1}] });
+    return true;
+  } else {
+    addBot('我基于当前画面理解你的问题。可以问我"有多少车/人""堵不堵""有没有安全隐患"等。要我先分析下画面里的车辆和人员吗？');
+    return false;
+  }
+}
+
+function pilotRespond(q){
+  if(/公园南门|黑色|可疑|搜索|拍照/.test(q)){
+    addBot('已解析指令，生成如下任务计划，请核对后确认执行：');
+    planCard({ title:'导航搜索取证任务', steps:[
+      {t:'导航至目标点',d:'公园南门（POI）· 巡航高度 60m · 预计 2min'},
+      {t:'区域搜索',d:'到达后盘旋搜索，目标特征：穿黑色外套人员'},
+      {t:'目标识别',d:'命中后自动锁定并变焦确认'},
+      {t:'拍照取证',d:'对目标连拍 3 张，自动打点存档'},
+      {t:'自动返航',d:'任务完成后返航入巢'} ],
+      safety:'✅ 安全校验通过：目标不在禁飞区 · 高度 60m 未超限 · 电量 95% 充足 · 距离 1.2km 在续航内。' });
+  } else if(/仓库|录像|60/.test(q)){
+    addBot('已生成定点录像任务，请确认：');
+    planCard({ title:'定点录像任务', steps:[
+      {t:'导航至目标点',d:'仓库区域大门口 · 巡航高度 50m'},
+      {t:'到位悬停',d:'到达后在门口上方悬停对准'},
+      {t:'录像 60 秒',d:'开始录像，时长 60s，自动存档'},
+      {t:'自动返航',d:'录制完成后返航'} ],
+      safety:'✅ 安全校验通过：目标合规 · 电量充足 · 天气良好。' });
+  } else if(/放大|变焦|窗户|楼/.test(q)){
+    addBot('这是低风险的云台/变焦动作，计划如下：');
+    planCard({ title:'变焦观察任务', steps:[
+      {t:'云台指向',d:'转向前方楼栋方向'},{t:'变焦放大',d:'放大至 8x，对焦 3 楼窗户'},{t:'保持画面',d:'稳定画面供人工观察'} ],
+      safety:'✅ 仅云台/变焦，不涉及飞行移动，风险低。' });
+  } else if(/航线|例行|返航|入巢|报告/.test(q)){
+    addBot('已解析为任务级指令（读取机身状态：电量 95% · 信号良好），计划如下：');
+    planCard({ title:'启动例行航线任务', steps:[
+      {t:'启动预设航线',d:'A 区例行巡检航线 · 共 8 航点 · 预计 14min'},
+      {t:'沿线自动采集',d:'逐航点悬停拍照/识别，异常自动打点'},
+      {t:'返航入巢',d:'航线完成后自动返航并入巢充电'},
+      {t:'结论归档',d:'轨迹/取证素材/异常结论并入当前巡检任务报告（不新建报告）'} ],
+      safety:'✅ 安全校验通过：航线全程不涉禁飞区 · 电量 95% 满足 14min 航时 · 信号良好。' });
+  } else if(/禁飞|机场|军事/.test(q)){
+    addBot('该指令存在安全问题，已拦截：');
+    planCard({ title:'导航任务（被拦截）', blocked:true,
+      steps:[{t:'导航至目标点',d:'目的地落在禁飞区范围内'}],
+      safety:'⛔ 安全校验未通过：目标位于禁飞区（距机场 2.3km）。已禁用执行，请更换目标或联系安全管理员。' });
+  } else {
+    addBot('请告诉我"飞到哪里 + 做什么"，例如："飞到公园南门，搜索穿黑色外套的可疑人员，找到后拍照"。我会生成任务计划，你确认后才会执行。');
+  }
+}
+
+function send(){
+  const q=input.value.trim(); if(!q) return;
+  // 告警图对象
+  if(target==='alarm'){
+    if(!currentAlarm){ toast('请点左侧告警卡上的「问智能体」选择一张告警图'); return; }
+    addUser(q); input.value=''; const t=typing(); setTimeout(()=>{ t.remove(); alarmRespond(); },1100); return;
+  }
+  // 10s 短视频对象
+  if(target==='clip'){
+    if(!clipReady){ input.value=''; startRecording(q); return; }   // 未录制则先录再问
+    addUser(q); input.value=''; const t=typing(); setTimeout(()=>{ t.remove(); clipRespond(q); },1200); return;
+  }
+  // 当前帧对象：按意图自动路由 —— 飞行指令→生成任务计划待确认；否则→抓帧研判
+  if(isPilot(q)){
+    subStatus.textContent='Live Copilot · 操控指令（需人工确认）';
+    addUser(q); input.value=''; const t=typing(); setTimeout(()=>{ t.remove(); pilotRespond(q); },1100); return;
+  }
+  addUser(q); input.value='';
+  if(frameLocked){
+    // 锁定态：追问同一帧，不重新截取
+    const t=typing(); setTimeout(()=>{ t.remove(); frameRespond(q); }, 1000); return;
+  }
+  // 未锁定：抓取"提问时刻帧"→分析→命中则锁定（画面持续飞行，只在抽屉回显"已锁定分析帧"）
+  const t=typing(); captureFrame(()=>{});
+  setTimeout(()=>{ t.remove(); const hit=frameRespond(q); if(hit){ lockFrame(); } scroll(); }, 1300);
+}
+$('#sendBtn').onclick=send;
+input.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
+
+renderSideAlarms();
+renderChips();
+setTimeout(()=>{ fabBadge.style.display='flex'; }, 1500);
+</script>
+</body>
+</html>

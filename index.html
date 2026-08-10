@@ -104,7 +104,6 @@
   .rec{ position:absolute; top:10px; right:14px; display:flex; align-items:center; gap:6px; font-size:12px; color:#cfd8e3; }
   .rec .r{ width:8px;height:8px;border-radius:50%;background:var(--danger); animation:blink 1.2s infinite; }
   @keyframes blink{ 50%{opacity:.25;} }
-  .hud-br{ position:absolute; bottom:10px; right:12px; font-size:11px; color:#8fa0b5; font-family:monospace; text-align:right; line-height:1.6; text-shadow:0 1px 2px #000; }
 
   /* 抓帧：仅扫描线 + 短暂"抓取中"标签，画面持续飞行不暂停 */
   .freeze-tag{ position:absolute; top:38px; left:12px; font-size:12px; color:#bfe0ff; background:rgba(47,123,255,.25);
@@ -306,7 +305,6 @@
     <div class="hud">
       <div class="cross"></div>
       <div class="video-tag">📡 任务实时回传 · 广角 · 1080P/25fps</div>
-      <div class="hud-br" id="hudMode">▶ AUTO 巡检中<br>航点 3/8</div>
     </div>
 
     <div class="scanline" id="scanline"></div>
@@ -402,7 +400,7 @@
 const $ = s => document.querySelector(s);
 const fab=$('#fab'), panel=$('#panel'), msgs=$('#msgs'), input=$('#input'), chips=$('#chips'),
       boxes=$('#boxes'), flightpath=$('#flightpath'), videoArea=$('#videoArea'),
-      scanline=$('#scanline'), subStatus=$('#subStatus'), fabBadge=$('#fabBadge'), hudMode=$('#hudMode'),
+      scanline=$('#scanline'), subStatus=$('#subStatus'), fabBadge=$('#fabBadge'),
       ctx=$('#ctx'), recording=$('#recording');
 let target='frame', currentAlarm=null, clipReady=false, frameLocked=false;
 
@@ -581,9 +579,8 @@ function runTask(btn){
   plan.querySelectorAll('.acts button').forEach(b=>b.disabled=true);
   const bar=plan.querySelector('.runbar'), fill=plan.querySelector('.runbar i');
   bar.style.display='block'; let p=0;
-  hudMode.innerHTML='▶ 执行指令任务<br>导航中…';
   const iv=setInterval(()=>{ p+=20; fill.style.width=p+'%'; if(p>=100){ clearInterval(iv);
-    addBot('✅ 任务执行完成：已到达目标并完成取证，素材与结论已并入当前巡检任务报告；飞机继续原巡检任务。'); hudMode.innerHTML='▶ AUTO 巡检中<br>航点 3/8'; } },700);
+    addBot('✅ 任务执行完成：已到达目标并完成取证，素材与结论已并入当前巡检任务报告；飞机继续原巡检任务。'); } },700);
   toast('任务已下发，飞机开始执行（可随时接管/中止）');
 }
 

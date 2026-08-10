@@ -135,6 +135,32 @@
   .vidtools .vt.rec{ border-color:rgba(239,68,68,.55); color:#ffd7d7; }
   .vidtools .vt.rec:before{ content:''; width:8px;height:8px;border-radius:50%;background:var(--danger); animation:blink 1.2s infinite; }
 
+  /* 右上角航迹小地图（对标真实产品 mapbox 街道图）——随抽屉左移避让 */
+  .minimap{ position:absolute; top:12px; right:14px; width:158px; height:110px; border-radius:8px; overflow:hidden; z-index:15;
+    border:1px solid rgba(120,150,190,.4); box-shadow:0 4px 16px rgba(0,0,0,.45); transition:transform .28s ease;
+    background:
+      radial-gradient(120px 80px at 70% 20%, #2b3a2c 0%, transparent 60%),
+      linear-gradient(135deg,#25313d 0%, #18222d 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.028) 0 11px, transparent 11px 22px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.028) 0 11px, transparent 11px 22px); }
+  body.drawer-open .minimap{ transform:translateX(-404px); }
+  .minimap svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .minimap .mm-label{ position:absolute; top:5px; left:7px; font-size:10px; color:#cfe0f2; background:rgba(0,0,0,.4); padding:1px 6px; border-radius:3px; z-index:3; }
+  .minimap .mm-foot{ position:absolute; bottom:4px; left:7px; font-size:9px; color:#9fb4cc; letter-spacing:.4px; z-index:3; opacity:.75; }
+  .minimap .mm-wp{ position:absolute; font-size:9px; color:#dfe9f5; text-shadow:0 1px 2px #000; z-index:3; transform:translate(-50%,-50%); }
+  .mm-drone{ position:absolute; left:0; top:0; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; z-index:4;
+    background:#5b9bff; box-shadow:0 0 8px #5b9bff, 0 0 0 3px rgba(91,155,255,.25);
+    offset-path: path('M 22 90 C 46 48, 92 96, 128 24'); animation:mmfly 9s linear infinite; }
+  @keyframes mmfly{ from{ offset-distance:0%; } to{ offset-distance:100%; } }
+
+  /* 右侧竖直进度条（对标真实产品右缘进度条）——随抽屉左移避让 */
+  .route-prog{ position:absolute; right:9px; top:34%; height:32%; width:5px; border-radius:3px; z-index:15;
+    background:rgba(255,255,255,.16); overflow:hidden; transition:transform .28s ease; }
+  body.drawer-open .route-prog{ transform:translateX(-404px); }
+  .route-prog i{ position:absolute; left:0; right:0; bottom:0; height:38%; border-radius:3px;
+    background:linear-gradient(180deg,#34d17a,#16a34a); box-shadow:0 0 8px rgba(52,209,122,.65); }
+  .route-prog b{ position:absolute; right:9px; top:-6px; font-size:9px; color:#bfe8cf; white-space:nowrap; text-shadow:0 1px 2px #000; }
+
   /* 素材放大灯箱：告警图 / 分析帧 / 短视频缩略点击可打开 */
   .lightbox{ position:absolute; inset:0; background:rgba(4,7,11,.82); z-index:80; display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px; backdrop-filter:blur(2px); }
   .lightbox.on{ display:flex; }
@@ -306,6 +332,25 @@
       <div class="cross"></div>
       <div class="video-tag">📡 任务实时回传 · 广角 · 1080P/25fps</div>
     </div>
+
+    <!-- 右上角航迹小地图（对标真实产品 mapbox 街道图） -->
+    <div class="minimap">
+      <span class="mm-label">街道</span>
+      <svg viewBox="0 0 158 110">
+        <path d="M 22 90 C 46 48, 92 96, 128 24" stroke="#5b9bff" stroke-width="2" fill="none" stroke-dasharray="4 3"/>
+        <circle cx="22" cy="90" r="4" fill="#22c55e"/>
+        <circle cx="80" cy="66" r="3.4" fill="#5b9bff"/>
+        <circle cx="128" cy="24" r="4" fill="#ef4444"/>
+      </svg>
+      <span class="mm-wp" style="left:22px;  top:78px;">1</span>
+      <span class="mm-wp" style="left:88px;  top:60px;">2</span>
+      <span class="mm-wp" style="left:128px; top:14px;">3</span>
+      <div class="mm-drone"></div>
+      <span class="mm-foot">◎ mapbox</span>
+    </div>
+
+    <!-- 右侧竖直进度条（对标真实产品右缘进度条） -->
+    <div class="route-prog"><b>航点 3/8</b><i></i></div>
 
     <div class="scanline" id="scanline"></div>
     <div class="freeze-tag">📸 已抓取分析帧（画面持续飞行）</div>

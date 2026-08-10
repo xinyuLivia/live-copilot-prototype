@@ -104,7 +104,6 @@
   .rec{ position:absolute; top:10px; right:14px; display:flex; align-items:center; gap:6px; font-size:12px; color:#cfd8e3; }
   .rec .r{ width:8px;height:8px;border-radius:50%;background:var(--danger); animation:blink 1.2s infinite; }
   @keyframes blink{ 50%{opacity:.25;} }
-  .hud-bl{ position:absolute; bottom:10px; left:12px; font-size:11px; color:#8fa0b5; font-family:monospace; line-height:1.6; text-shadow:0 1px 2px #000; }
   .hud-br{ position:absolute; bottom:10px; right:12px; font-size:11px; color:#8fa0b5; font-family:monospace; text-align:right; line-height:1.6; text-shadow:0 1px 2px #000; }
 
   /* 抓帧：仅扫描线 + 短暂"抓取中"标签，画面持续飞行不暂停 */
@@ -307,7 +306,6 @@
     <div class="hud">
       <div class="cross"></div>
       <div class="video-tag">📡 任务实时回传 · 广角 · 1080P/25fps</div>
-      <div class="hud-bl" id="hudCoord">LAT 31.8967° &nbsp; LNG 118.7841°<br>ALT 30.0m &nbsp; SPD 5.2m/s</div>
       <div class="hud-br" id="hudMode">▶ AUTO 巡检中<br>航点 3/8</div>
     </div>
 
@@ -408,12 +406,9 @@ const fab=$('#fab'), panel=$('#panel'), msgs=$('#msgs'), input=$('#input'), chip
       ctx=$('#ctx'), recording=$('#recording');
 let target='frame', currentAlarm=null, clipReady=false, frameLocked=false;
 
-/* ---- 让 HUD 数字动起来，制造"在飞"的感觉 ---- */
-let baseLat=31.8967, baseLng=118.7841;
+/* ---- 让底部飞控面板的速度动起来，制造"在飞"的感觉 ---- */
 setInterval(()=>{
-  baseLat+=0.00004; baseLng+=0.00003;
   const spd=(4.6+Math.random()*1.4).toFixed(1);
-  $('#hudCoord').innerHTML=`LAT ${baseLat.toFixed(4)}° &nbsp; LNG ${baseLng.toFixed(4)}°<br>ALT 30.0m &nbsp; SPD ${spd}m/s`;
   $('#pSpd').textContent=spd+' m/s';
 },1000);
 

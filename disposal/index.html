@@ -523,11 +523,11 @@ setInterval(()=>{ if(!document.body.classList.contains('paused')) $('#pSpd').tex
 function renderAlarm(){
   const wrap=$('#alarmList');
   if(!alarm){ wrap.innerHTML='<div style="font-size:11.5px;color:#5f6b7c;padding:10px 2px;line-height:1.7;">暂无告警，边飞边检进行中…</div>'; return; }
-  /* 本期范围：告警状态不随处置变化，左侧卡片始终保持「待处置」 */
+  /* 本期范围：左侧告警卡沿用 V1.3，不随处置变化，不展示状态标签与时间 */
   wrap.innerHTML = `
     <div class="acard">
-      <div class="ah"><span class="dot2"></span>车辆违停<span class="stt">待处置</span></div>
-      <div class="meta">K43+250 ~ K43+400 · ${alarm.time}</div>
+      <div class="ah"><span class="dot2"></span>车辆违停</div>
+      <div class="meta">K43+250 ~ K43+400</div>
       <div class="aim" id="aimShot">
         <div class="minicar" style="transform:translate(-50%,-50%) scale(.82)"><div class="b"></div><div class="w"></div><div class="p"></div></div>
         <i class="abox" style="left:34%;top:34%;width:76px;height:44px;"></i>

@@ -164,29 +164,32 @@
   /* ---------- 告警待处置弹窗（右上角浮层，不遮挡、不虚化画面） ---------- */
   .amask{ position:absolute; top:52px; right:14px; z-index:70; display:none; }
   .amask.on{ display:block; }
-  .adlg{ width:360px; background:var(--panel); border:1px solid #2d3644; border-radius:12px; overflow:hidden; box-shadow:0 16px 44px rgba(0,0,0,.6);
+  .adlg{ width:330px; background:var(--panel); border:1px solid #2d3644; border-radius:12px; overflow:hidden; box-shadow:0 16px 44px rgba(0,0,0,.6);
     animation:pop .26s cubic-bezier(.2,1.2,.4,1); }
   @keyframes pop{ from{ transform:translateX(16px); opacity:0; } }
   /* 弹窗占用右上角时，小地图让位 */
   body.alarm-open .minimap{ opacity:0; pointer-events:none; }
-  .adlg .dh{ display:flex; align-items:center; gap:8px; padding:12px 14px; background:rgba(239,68,68,.1); border-bottom:1px solid rgba(239,68,68,.28); }
-  .adlg .dh .ttl{ font-size:14px; font-weight:600; color:#ffc9c9; }
-  .adlg .dh .cd{ margin-left:auto; position:relative; width:32px; height:32px; }
-  .adlg .dh .cd svg{ width:32px; height:32px; transform:rotate(-90deg); }
-  .adlg .dh .cd circle{ fill:none; stroke-width:3; }
-  .adlg .dh .cd .bgc{ stroke:#2b3441; } .adlg .dh .cd .fgc{ stroke:var(--danger); stroke-linecap:round; stroke-dasharray:88; transition:stroke-dashoffset .95s linear; }
-  .adlg .dh .cd b{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#ffd7d7; }
-  .adlg .db{ padding:12px 14px; }
-  .adlg .kv{ font-size:12px; color:var(--sub); line-height:1.9; }
-  .adlg .kv b{ color:#dbe4ef; font-weight:500; }
-  .adlg .shotimg{ height:120px; margin:10px 0; border-radius:9px; position:relative; overflow:hidden;
+  /* 版式对齐线上「紧急预警」弹窗：标题 + 事件一句话 + 桩号区间 + 图 + 提示语 + 右对齐按钮 */
+  .adlg .dh{ display:flex; align-items:center; gap:7px; padding:12px 14px 0; }
+  .adlg .dh .ico{ font-size:15px; color:var(--warn); }
+  .adlg .dh .ttl{ font-size:14px; font-weight:600; color:#e9eef5; }
+  .adlg .dh .cd{ margin-left:auto; position:relative; width:28px; height:28px; }
+  .adlg .dh .cd svg{ width:28px; height:28px; transform:rotate(-90deg); }
+  .adlg .dh .cd circle{ fill:none; stroke-width:2.5; }
+  .adlg .dh .cd .bgc{ stroke:#2b3441; } .adlg .dh .cd .fgc{ stroke:var(--warn); stroke-linecap:round; stroke-dasharray:88; transition:stroke-dashoffset .95s linear; }
+  .adlg .dh .cd b{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:#ffd591; font-weight:500; }
+  .adlg .db{ padding:9px 14px 14px; }
+  .adlg .ev{ font-size:13px; color:#dbe4ef; }
+  .adlg .dstake{ font-size:11.5px; color:var(--sub); margin-top:4px; }
+  .adlg .shotimg{ height:118px; margin:9px 0; border-radius:8px; position:relative; overflow:hidden;
     background:linear-gradient(160deg,#2b3038 0%,#1b2027 60%,#171b22 100%); }
-  .adlg .tip{ font-size:11.5px; color:#ffd591; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); padding:7px 9px; border-radius:7px; }
-  .adlg .da{ display:flex; gap:8px; padding:0 14px 14px; }
-  .adlg .da button{ flex:1; font-size:12.5px; padding:9px 6px; border-radius:8px; cursor:pointer; border:1px solid var(--line); background:#0e141c; color:#cfd8e3; }
+  .adlg .note{ font-size:11.5px; color:var(--sub); line-height:1.7; }
+  .adlg .da{ display:flex; justify-content:flex-end; gap:8px; padding:0 14px 14px; }
+  .adlg .da button{ font-size:12.5px; padding:7px 11px; border-radius:6px; cursor:pointer; white-space:nowrap; flex:0 0 auto; border:1px solid var(--line); background:transparent; color:#cfd8e3; }
   .adlg .da button:hover{ border-color:var(--accent); color:#fff; }
-  .adlg .da button.ai{ flex:1.35; background:linear-gradient(135deg,#2f7bff,#5b9bff); border-color:var(--accent); color:#fff; font-weight:600; }
-  .adlg .da button.hl{ border-color:var(--accent); color:#dbe9ff; box-shadow:0 0 0 1px rgba(47,123,255,.35) inset; }
+  .adlg .da button.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .adlg .da button.primary:hover{ filter:brightness(1.1); }
+  .adlg .da button.ai{ background:linear-gradient(135deg,#6d5bff,#2f7bff); border-color:#6d5bff; color:#fff; font-weight:600; }
 
   /* 入口不可用：原因常驻在按钮上方，hover / 点 ⓘ 只补判据明细 */
   .gate{ display:none; margin-top:9px; padding:8px 10px; border-radius:8px; font-size:11.5px; line-height:1.65;
@@ -555,26 +558,23 @@
   <div class="amask" id="amask">
     <div class="adlg">
       <div class="dh">
-        <span style="font-size:16px;">⚠</span>
-        <span class="ttl">车辆违停 · 待处置</span>
+        <span class="ico">⚠</span>
+        <span class="ttl">紧急预警</span>
         <div class="cd"><svg viewBox="0 0 32 32"><circle class="bgc" cx="16" cy="16" r="14"/><circle class="fgc" id="cdArc" cx="16" cy="16" r="14"/></svg><b id="cdNum">30</b></div>
       </div>
       <div class="db">
-        <div class="kv">
-          事件类型：<b>车辆违停</b>（illegal_parking）<br>
-          事件位置：<b>K43+250 ~ K43+400</b> · 迎宾大道上行应急车道<br>
-          发生时间：<b id="alarmTime">--</b> · 来源：<b>边飞边检</b>
-        </div>
+        <div class="ev">发现车辆违停事件</div>
+        <div class="dstake">桩号区间：K43+250 ~ K43+400</div>
         <div class="shotimg" id="dlgShot">
           <div class="minicar"><div class="b"></div><div class="w"></div><div class="p"></div></div>
           <i class="detbox" style="left:38%;top:40%;width:88px;height:52px;"><span class="lb">违停车辆 0.94</span></i>
         </div>
-        <div class="tip">已自动暂停航线并悬停。<b>30 秒内未选择将视为不处置</b>，系统自动恢复航线继续飞行。</div>
+        <div class="note">请尽快派遣人员处置以确保道路安全畅通</div>
         <div class="gate" id="gate"></div>
       </div>
       <div class="da">
         <button id="btnIgnore">暂不处理</button>
-        <button id="btnManual">立即接管处置</button>
+        <button id="btnManual" class="primary">立即接管处置</button>
         <button class="ai" id="btnAI">AI 智能处置</button>
       </div>
     </div>
@@ -663,7 +663,7 @@ function lightbox(kind){
     $('#lbCap').textContent='取证照片 · 车牌 '+PLATE+' · 变焦 6.0x';
   } else if(kind==='blur'){
     box.innerHTML = evidenceHTML(true);
-    $('#lbCap').textContent='取证照片 · 车牌区域清晰度不足';
+    $('#lbCap').textContent='取证素材 · 未取到达标车牌';
   } else {
     box.innerHTML = `<div style="position:absolute;inset:0;background:linear-gradient(160deg,#2b3038,#171b22);">
       <div class="minicar" style="transform:translate(-50%,-50%) scale(2.2)"><div class="b"></div><div class="w"></div><div class="p"></div></div>
@@ -799,7 +799,6 @@ function triggerAlarm(){
   const t=new Date();
   const time=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
   alarm={ status:'待处置', time, plate:null, evidence:false, way:null, actions:[], cost:0 };
-  $('#alarmTime').textContent=time;
   renderAlarm();
   // 第一步：告警推送
   setFlow(0); toast('检测到车辆违停告警（alarmId 1113-0842）');
@@ -1041,16 +1040,15 @@ async function successClose(my){
 async function degradeClose(my){
   alarm.plate=null; alarm.evidence=true; alarm.status='已处置（未取到车牌）'; showStop(false);
   addPhase('处置结论 · 降级收口');
-  addBot('⚠ 重试次数已用尽：两次拍摄的车牌清晰度分别为 <b>42%</b> / <b>58%</b>，均低于阈值 70%（车尾被后方护栏与逆光影响）。<br>我判定<b>降级收口</b>：保留最佳一张取证照片，标记<b>建议人工复核</b>，航线照常恢复。');
+  addBot('⚠ 重试次数已用尽：换机位重拍两次仍未取到达标车牌（车尾被后方护栏与逆光影响）。<br>我判定<b>降级收口</b>：保留最佳一张取证素材，航线照常恢复。<br><span style="color:#8a95a5;font-size:11.5px;">本期不做置信度分级与「建议人工复核」自动打标。</span>');
   const c=document.createElement('div'); c.className='card';
   c.innerHTML = `
     <div class="ch">取证产出<span class="tag warn">降级收口</span></div>
     ${evidenceHTML(true)}
-    <div class="plateline"><span class="pv" style="color:#ffd591;font-size:14px;">未识别</span><span class="badge warn">建议人工复核</span></div>
-    <div class="conf low"><span>清晰度</span><span class="bar"><i style="width:58%"></i></span><span>58%</span></div>
+    <div class="plateline"><span class="pv" style="color:#ffd591;font-size:14px;">未取到达标车牌</span></div>
     <div class="arch" id="archBox" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.05);">
       <div class="at" style="color:#ffd591;border-color:rgba(245,158,11,.2);">📥 正在归档…</div>
-      <div class="ai2 pending" data-k="media"><em>○</em>最佳一张取证照片存入巡检数据 / 媒体库（标建议人工复核）</div>
+      <div class="ai2 pending" data-k="media"><em>○</em>最佳一张取证素材存入巡检数据 / 媒体库</div>
     </div>
     <div class="scopetip">本期范围：产出只在<b>本结论卡</b>与<b>巡检数据 / 媒体库</b>可见。<b>告警详情挂取证照片、告警状态更新、任务报告回写均暂不实现</b>。</div>
     <div class="acts">

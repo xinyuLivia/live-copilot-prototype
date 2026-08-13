@@ -191,40 +191,6 @@
   .adlg .da button.primary:hover{ filter:brightness(1.1); }
   .adlg .da button.ai{ background:linear-gradient(135deg,#6d5bff,#2f7bff); border-color:#6d5bff; color:#fff; font-weight:600; }
 
-  /* 入口不可用：原因常驻在按钮上方，hover / 点 ⓘ 只补判据明细 */
-  .gate{ display:none; margin-top:9px; padding:8px 10px; border-radius:8px; font-size:11.5px; line-height:1.65;
-    color:#ffd591; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.32); }
-  .gate.on{ display:block; }
-  .gate.sys{ color:#bcd6ff; background:rgba(47,123,255,.1); border-color:rgba(47,123,255,.32); }
-  .gate b{ color:#fff2d8; }
-  .gate.sys b{ color:#dbe9ff; }
-  .gate .ops{ display:flex; justify-content:flex-end; gap:12px; margin-top:6px; padding-top:5px;
-    border-top:1px dashed rgba(245,158,11,.25); }
-  .gate.sys .ops{ border-top-color:rgba(47,123,255,.25); }
-  .gate .why, .gate .retry{ cursor:pointer; text-decoration:underline dotted;
-    color:inherit; opacity:.85; font-size:11px; background:none; border:none; padding:0; }
-  .gate .why:hover, .gate .retry:hover{ opacity:1; }
-  .gate .more{ opacity:.8; }
-
-  .aiwrap{ flex:1.35; position:relative; display:flex; }
-  .aiwrap button.ai{ flex:1; }
-  .adlg .da button.ai.dis{ background:#1a2028; border-color:#2d3644; color:#5f6b7c; font-weight:500;
-    cursor:not-allowed; box-shadow:none; }
-  .adlg .da button.ai.checking{ background:#182130; border-color:#2f7bff55; color:#9dbcf0; cursor:progress; }
-  .spin{ display:inline-block; width:10px; height:10px; margin-right:5px; vertical-align:-1px;
-    border:1.6px solid #2f7bff; border-top-color:transparent; border-radius:50%; animation:sp .7s linear infinite; }
-  @keyframes sp{ to{ transform:rotate(360deg) } }
-
-  /* 判据明细：就地展开，不用浮层遮挡原因 */
-  .ckbox{ display:none; margin-top:7px; padding:8px 9px; border-radius:7px; background:#0b0f15; border:1px solid #2d3644; }
-  .ckbox.open{ display:block; }
-  .ckbox .tt{ font-size:11px; color:#8a95a5; margin-bottom:5px; }
-  .ckbox .ck{ display:flex; gap:6px; font-size:11.5px; line-height:1.7; color:#cfd8e3; }
-  .ckbox .ck i{ flex:none; font-style:normal; width:12px; }
-  .ckbox .ck.no{ color:#ffb3b3; }
-  .ckbox .ck.no i{ color:var(--danger); }
-  .ckbox .ck.ok i{ color:var(--ok); }
-
   /* 违停车缩略（弹窗/详情复用） */
   .minicar{ position:absolute; left:52%; top:52%; transform:translate(-50%,-50%); width:74px; height:40px; }
   .minicar .b{ position:absolute; inset:0; border-radius:6px 6px 8px 8px; background:linear-gradient(180deg,#5d6c82,#3d4759); box-shadow:0 3px 10px rgba(0,0,0,.5); }
@@ -276,14 +242,6 @@
   .card .cb{ padding:10px 12px; font-size:12.5px; line-height:1.6; }
   .card .cb .muted{ color:var(--sub); font-size:11.5px; }
 
-  /* 判定清单 */
-  .checks{ display:flex; flex-direction:column; gap:5px; margin-top:7px; }
-  .chk{ display:flex; align-items:center; gap:7px; font-size:12px; color:#cfd8e3; }
-  .chk .m{ width:15px; height:15px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; flex-shrink:0; }
-  .chk .m.y{ background:rgba(34,197,94,.16); color:#7ee2a8; border:1px solid rgba(34,197,94,.4); }
-  .chk .m.n{ background:rgba(239,68,68,.16); color:#ffb3b3; border:1px solid rgba(239,68,68,.4); }
-  .chk small{ color:var(--sub); margin-left:auto; font-size:10.5px; }
-
   /* 动作步骤 */
   .steps{ display:flex; flex-direction:column; }
   .step{ display:flex; gap:10px; padding:7px 12px; font-size:12.5px; align-items:flex-start; border-top:1px solid rgba(35,42,53,.6); }
@@ -296,11 +254,6 @@
   .step .dsc{ line-height:1.5; flex:1; } .step .dsc small{ color:var(--sub); display:block; font-size:11px; margin-top:1px; }
   .step .rt{ font-size:10.5px; color:var(--sub); font-family:monospace; margin-top:2px; }
   .step.run .dsc{ color:#fff; }
-
-  /* 安全校验 */
-  .safety{ margin:0 12px 11px; padding:8px 10px; border-radius:8px; font-size:11.5px; line-height:1.6; }
-  .safety.ok{ background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.25); color:#a7f3c0; }
-  .safety.bad{ background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.3); color:#ffb3b3; }
 
   /* 车牌取证照片 */
   .evidence{ height:150px; position:relative; overflow:hidden; background:linear-gradient(170deg,#20262f 0%,#151a21 100%); cursor:zoom-in; }
@@ -465,15 +418,6 @@
         <div class="body"></div><div class="win"></div>
         <div class="tl l"></div><div class="tl r"></div><div class="plate-tiny"></div>
       </div>
-      <!-- 多车场景（?case=blocked）才显示的另外两辆，保证画面与置灰原因一致 -->
-      <div class="illegal extra" id="extra1" style="left:64.5%;top:53%;transform:scale(.78);display:none;">
-        <div class="lock"><span class="lbl">违停车辆 0.88</span></div>
-        <div class="body"></div><div class="win"></div><div class="tl l"></div><div class="tl r"></div><div class="plate-tiny"></div>
-      </div>
-      <div class="illegal extra" id="extra2" style="left:54%;top:68%;transform:scale(1.08) rotate(-4deg);display:none;">
-        <div class="lock"><span class="lbl">违停车辆 0.81</span></div>
-        <div class="body"></div><div class="win"></div><div class="tl l"></div><div class="tl r"></div><div class="plate-tiny"></div>
-      </div>
     </div>
 
     <div class="hud">
@@ -570,7 +514,6 @@
           <i class="detbox" style="left:38%;top:40%;width:88px;height:52px;"><span class="lb">违停车辆 0.94</span></i>
         </div>
         <div class="note">请尽快派遣人员处置以确保道路安全畅通</div>
-        <div class="gate" id="gate"></div>
       </div>
       <div class="da">
         <button id="btnIgnore">暂不处理</button>
@@ -692,99 +635,20 @@ function showAlarmDialog(){
     n--; num.textContent=Math.max(n,0); arc.style.strokeDashoffset=String(88*(CONFIRM_SEC-n)/CONFIRM_SEC);
     if(n<=0){ clearInterval(cdTimer); onTimeout(); }
   },1000);
-  runGate(runId);
 }
 function closeDialog(){ clearInterval(cdTimer); amask.classList.remove('on'); document.body.classList.remove('alarm-open'); }
-
-/* ---------------- AI 入口可用性校验（三态：校验中 / 可用 / 置灰） ----------------
-   置灰时原因常驻在按钮上方，hover 或点【查看判据】才展开明细；误点按钮也会 toast 原因。 */
-const GATE_CASES = {
-  blocked: { kind:'scene', reason:'画面中有 <b>3 辆车</b>，暂不支持多车取证', advise:'建议人工接管', more:2,
-    checks:[['no','单车','检出 3 辆（要求 1 辆）'],['ok','静止','位移 0.2 m/s（阈值 0.5）'],
-            ['no','方向一致','车头与航线夹角 118°（要求 ≤30°）'],['no','距航线','68 m（要求 ≤50 m）'],['ok','目标置信度','0.94（阈值 0.30）']] },
-  moving: { kind:'scene', reason:'目标车辆<b>仍在移动</b>，无法稳定取证', advise:'建议人工接管', more:0,
-    checks:[['ok','单车','检出 1 辆'],['no','静止','位移 1.8 m/s（阈值 0.5）'],['ok','方向一致','夹角 12°'],['ok','距航线','23 m']] },
-  safety: { kind:'safety', reason:'<b>电量 18%</b> 低于处置门槛 30%', advise:'建议暂不处理并返航', more:1,
-    checks:[['no','电量','18%（门槛 30%）'],['no','禁飞区','目标位于限高区边缘 120 m 内'],['ok','相对高度','42 m（可下降）'],['ok','链路','信号 4/5']] },
-  mcpdown: { kind:'sys', reason:'<b>智能处置服务暂不可用</b>（MCP 连接超时）', advise:'建议人工接管，或稍后重试', more:0, retry:true,
-    checks:[['no','处置服务','连接 9003 超时 3s'],['ok','分析流','SEI 正常'],['ok','设备 DRC','就绪']] },
-  slowcheck:{ kind:'sys', reason:'<b>场景校验超时</b>，未取到目标数量与朝向', advise:'可重试校验，或直接人工接管', more:0, retry:true,
-    checks:[['no','校验结果','等待检测服务 3.0s 未返回'],['ok','告警数据','已收到 alarmId 1113-0842']] }
-};
-let gateRetried=false;
-
-let ckPinned=false;
-function setAIState(st, g){
-  const btn=$('#btnAI'), gate=$('#gate');
-  btn.classList.remove('dis','checking'); ckPinned=false;
-  btn.onmouseenter=null; btn.onmouseleave=null;
-  gate.className='gate'; $('#btnIgnore').classList.remove('hl');
-  if(st==='checking'){
-    btn.classList.add('checking'); btn.innerHTML='<i class="spin"></i>校验中…';
-    gate.classList.add('on','sys');
-    gate.innerHTML='正在校验场景可处置性与安全条件（单车 / 静止 / 方向 / 电量 / 禁飞区）…';
-    return;
-  }
-  if(st==='ok'){
-    btn.innerHTML='AI 智能处置';
-    gate.classList.remove('on'); gate.innerHTML='';
-    toast('场景校验通过 · AI 智能处置可用'); return;
-  }
-  btn.classList.add('dis'); btn.innerHTML='AI 智能处置 ⓘ';
-  gate.classList.add('on'); if(g.kind==='sys') gate.classList.add('sys');
-  gate.innerHTML=`<div>⚠ <b>AI 智能处置不可用</b>：${g.reason}<br>${g.advise}${g.more?`<span class="more"> · 另有 ${g.more} 项不满足</span>`:''}</div>
-    <div class="ops">${g.retry?'<button class="retry" id="gateRetry">重试校验</button>':''}<button class="why" id="gateWhy">查看判据</button></div>
-    <div class="ckbox" id="ckBox"><div class="tt">场景可处置性与安全校验明细</div>${
-      g.checks.map(c=>`<div class="ck ${c[0]}"><i>${c[0]==='ok'?'✓':'✗'}</i><span>${c[1]}：${c[2]}</span></div>`).join('')}</div>`;
-  if(g.kind==='safety') $('#btnIgnore').classList.add('hl');
-  const ck=$('#ckBox'), why=$('#gateWhy');
-  why.onclick=()=>{ ckPinned=!ckPinned; ck.classList.toggle('open', ckPinned); why.textContent=ckPinned?'收起判据':'查看判据'; };
-  btn.onmouseenter=()=>{ if(!ckPinned) ck.classList.add('open'); };   // hover 只是预览，移开即收
-  btn.onmouseleave=()=>{ if(!ckPinned) ck.classList.remove('open'); };
-  const rt=$('#gateRetry');
-  if(rt) rt.onclick=()=>{ gateRetried=true; runGate(runId); };
-}
-
-/* 多车场景：弹窗缩略图同步补上另外两辆，避免「文案说 3 辆、图里 1 辆」 */
-function syncDialogShot(){
-  const box=$('#dlgShot'); if(!box) return;
-  box.querySelectorAll('.dlgextra').forEach(e=>e.remove());
-  if(scenario!=='blocked') return;
-  const car=(l,t,s)=>`<div class="minicar dlgextra" style="left:${l};top:${t};transform:translate(-50%,-50%) scale(${s});"><div class="b"></div><div class="w"></div><div class="p"></div></div>`;
-  const bx=(l,t,w,h,c)=>`<i class="detbox dlgextra" style="left:${l};top:${t};width:${w}px;height:${h}px;border-color:#8a95a5;"><span class="lb" style="background:#8a95a5;color:#141922;">违停车辆 ${c}</span></i>`;
-  box.insertAdjacentHTML('beforeend', car('20%','40%',.58)+bx('7%','26%',60,36,'0.88')+car('81%','76%',.5)+bx('70%','62%',52,31,'0.81'));
-}
-
-function runGate(my){
-  const g = GATE_CASES[scenario];
-  $('#pBat').textContent = (scenario==='safety') ? '18%' : '88%';   // 保持 HUD 与校验结论一致
-  syncDialogShot();
-  setAIState('checking');
-  const wait = (scenario==='slowcheck' && !gateRetried) ? 3000 : 1200;
-  setTimeout(()=>{
-    if(stale(my) || !amask.classList.contains('on')) return;
-    if(!g || (g.retry && gateRetried)) setAIState('ok');
-    else setAIState('blocked', g);
-  }, wait);
-}
 
 /* ---------------- 场景入口 ----------------
    变体仅供演示，通过 URL 参数切换 ?case=
      degrade   车牌拍不清 → 降级收口
-     race      处置权被他人抢占
-     blocked   多车 → AI 入口置灰（场景类，含多项不满足）
-     moving    车辆仍在移动 → 置灰
-     safety    电量不足 / 限高区 → 置灰（安全类，引导暂不处理）
-     mcpdown   处置服务不可用 → 置灰（系统类，可重试）
-     slowcheck 场景校验超时 3s → 置灰（可重试，重试后通过） */
+     race      处置权被他人抢占 */
 scenario = new URLSearchParams(location.search).get('case') || 'success';
 $('#btnReplay').onclick=()=>triggerAlarm();
 
 function resetAll(){
-  runId++; manualMode=false; gateRetried=false; clearInterval(cdTimer); closeDialog(); showStop(false);
+  runId++; manualMode=false; clearInterval(cdTimer); closeDialog(); showStop(false);
   document.body.classList.remove('paused');
   scene.style.transform='none'; illegal.classList.remove('locked');
-  ['#extra1','#extra2'].forEach(s=>{ const e=$(s); e.style.display='none'; e.classList.remove('locked'); });
   cross.classList.remove('on-target'); $('#zoomTag').classList.remove('on');
   $('#pZoom').textContent='1.0x'; $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
   $('#btnManualResume').disabled=true; $('#progFill').style.height='38%';
@@ -809,7 +673,6 @@ function triggerAlarm(){
     setState('⏸ 已自动暂停航线 · 无人机悬停待处置','');
     $('#taskState').textContent='● 已暂停 · 待处置';
     illegal.classList.add('locked');
-    if(scenario==='blocked') ['#extra1','#extra2'].forEach(s=>{ const e=$(s); e.style.display='block'; e.classList.add('locked'); });
     if(scenario==='race'){ raceLost(); return; }
     showAlarmDialog();
   }, 900);
@@ -818,18 +681,7 @@ function triggerAlarm(){
 /* ---------------- 用户选择分支 ---------------- */
 $('#btnIgnore').onclick=()=>{ closeDialog(); notDisposed('用户点【暂不处理】'); };
 $('#btnManual').onclick=()=>{ closeDialog(); manualTakeover(); };
-$('#btnAI').onclick=()=>{
-  const btn=$('#btnAI');
-  if(btn.classList.contains('checking')){ toast('场景校验中，请稍候…'); return; }
-  if(btn.classList.contains('dis')){        // 触屏必然会点到，不能「点了没反应」
-    const g=GATE_CASES[scenario]||{};
-    const plain=s=>String(s||'').replace(/<[^>]+>/g,'');
-    toast('AI 智能处置不可用：'+plain(g.reason)+' · '+plain(g.advise));
-    const why=$('#gateWhy'); if(why && !ckPinned) why.onclick();   // 误点即展开判据
-    return;
-  }
-  closeDialog(); aiDispose(runId);
-};
+$('#btnAI').onclick=()=>{ closeDialog(); aiDispose(runId); };
 
 function onTimeout(){
   closeDialog();
@@ -839,13 +691,13 @@ function notDisposed(reason){
   alarm.status='未处理'; renderAlarm();
   toast(reason+' → 视为不处置');
   openPanel(); setSub('未处置');
-  addBot(`⏱ <b>${reason}</b>：本次事件视为<b>不处置</b>。已<b>清理接管记录</b>，无人机自动恢复航线继续任务；该事件不再可发起 AI 处置。`);
+  addBot(`⏱ <b>${reason}</b>：本次事件视为<b>不处置</b>。接管记录置 <b>status=5 已失效</b>（点【暂不处理】为 <b>status=4 已取消</b>），无人机自动恢复航线继续任务；该事件不再可发起 AI 处置。`);
   setFlow(4); resumeRoute(false);
 }
 
 function raceLost(){
   openPanel(); setSub('处置权已被抢占');
-  addBot('🔒 该事件已被<b>其他用户接管</b>（处置权 0 → 1 由他人抢占）。本页面弹窗已关闭，<b>不重复暂停航线、不重复生成接管记录</b>。');
+  addBot('🔒 该事件已被<b>其他用户接管</b>（接口返回 <b>11000001 告警已被接管</b>）。本页面弹窗已关闭，<b>不重复暂停航线、不重复生成接管记录</b>。');
   addBot('你可以在<b>接管记录</b>中查看对方的处置进展与结果。');
   alarm.status='处置中'; renderAlarm(); setFlow(2);
   setState('🔒 他人处置中 · 本端只读','ai');
@@ -881,7 +733,7 @@ async function abortDisposal(){
   });
   alarm.status='处置中断'; alarm.way='AI 智能处置（人工终止）'; renderAlarm();
   setSub('已人工终止');
-  addBot('🛑 已<b>人工终止</b>本次 AI 处置：立即停止下发飞行与云台指令，<b>已拍素材保留</b>；处置权释放，接管记录标记为<b>处置中断</b>。');
+  addBot('🛑 已<b>人工终止</b>本次 AI 处置：立即停止下发飞行与云台指令，<b>已拍素材保留</b>；以 <b>FAILED</b> 回调收尾，接管记录置 <b>status=3 处置失败</b>并释放处置权。');
   $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
   toast('已终止 AI 处置，正在恢复航线');
 
@@ -899,7 +751,7 @@ async function abortDisposal(){
   $('#taskState').textContent='● 任务执行中'; $('#progFill').style.height='52%'; $('#pWp').textContent='航点 4/8';
   await sleep(1800); if(stale(my)) return;
 
-  box.innerHTML='🔄 <b>终止收口完成</b>：<br>step1 恢复航线 <b style="color:#7ee2a8;">✓</b><br>step2 检测与告警推送 <b style="color:#7ee2a8;">✓ 已重新开启</b><br>事件状态：<b>处置中断</b>，素材保留，可再次人工接管补拍。';
+  box.innerHTML='🔄 <b>终止收口完成</b>：<br>step1 恢复航线 <b style="color:#7ee2a8;">✓</b><br>step2 检测与告警推送 <b style="color:#7ee2a8;">✓ 已重新开启</b><br>接管记录：<b>status=3 处置失败</b>，素材保留，可再次人工接管补拍。';
   setState('任务执行中 · 航点 4/8','run'); scroll();
 }
 
@@ -910,28 +762,22 @@ async function aiDispose(my){
   openPanel(); setSub('处置中'); setFlow(2); showStop(true);
   $('#pCtrl').textContent='智能体'; $('#ptz').classList.add('ai');
   setState('🤖 AI 智能处置中 · 抵近取证','ai');
-  toast('已抢占处置权（0 → 1），其他页面弹窗已关闭');
+  toast('Agent 回调 PROCESSING 成功 · 其他页面弹窗已关闭');
 
-  addBot('🔒 已<b>抢占处置权</b>（接管状态 <b>0 → 1</b>）。开始分析这条违停告警…');
+  addBot('🔒 已受理该告警（接管记录 <b>status=2 处置中 · handleType=Agent</b>）。开始分析这条违停告警…');
   let t=typing(); await sleep(1100); t.remove(); if(stale(my)) return;
 
   /* --- 阶段一：分析 --- */
   addPhase('分析过程');
   const c1=card({
-    title:'目标确认与场景判定', tag:'可处置', tagCls:'ok',
+    title:'目标确认', tag:'车辆违停', tagCls:'ok',
     body:`已在告警帧中锁定目标：<b>1 辆白灰色轿车</b>，停于上行<b>应急车道</b>，车尾朝向与航线方向一致。
-      <div class="checks">
-        ${chk(true,'仅一辆车','检出 1 辆')}
-        ${chk(true,'车辆静止','3 帧位移 &lt; 0.2m')}
-        ${chk(true,'高速场景','迎宾大道上行')}
-        ${chk(true,'违停方向与航线一致','偏航 6°')}
-      </div>
       <div class="muted" style="margin-top:8px;">处置策略：从车<b>后方偏右 12m / 高度 18m</b> 抵近，云台下俯 32°，变焦 6x 拍摄车尾车牌。</div>`
   });
   await sleep(1400); if(stale(my)) return;
 
   /* --- 阶段二：规划 --- */
-  addPhase('动作规划与安全校验');
+  addPhase('动作规划');
   const planEl=card({
     title:'处置动作序列', tag:'自动执行', tagCls:'',
     steps:[
@@ -939,11 +785,10 @@ async function aiDispose(my){
       {t:'云台看向目标', d:'俯仰 -32° · 锁定车尾区域'},
       {t:'变焦至 6.0x', d:'对焦车牌区域，等待画面稳定'},
       {t:'拍照取证', d:'连拍 2 张，自动挑选最清晰一张'}
-    ],
-    safety:'✅ 安全校验通过：不在禁飞区 · 高度 18m 合规 · 电量 88% 充足 · 目标距离 26m 在范围内。'
+    ]
   });
   await sleep(1200); if(stale(my)) return;
-  addBot('安全校验通过，<b>无需你逐步确认</b>，我直接执行。执行中你随时可以【转人工接管】，或点面板底部【<b>结束处置并恢复航线</b>】终止。');
+  addBot('<b>无需你逐步确认</b>，我直接执行。执行中你随时可以【转人工接管】，或点面板底部【<b>结束处置并恢复航线</b>】终止。');
   await sleep(700); if(stale(my)) return;
 
   /* --- 阶段三：执行 --- */
@@ -981,14 +826,12 @@ async function aiDispose(my){
   }
 }
 
-function chk(ok,label,note){ return `<div class="chk"><span class="m ${ok?'y':'n'}">${ok?'✓':'✕'}</span>${label}<small>${note}</small></div>`; }
 
-function card({title, tag, tagCls, body, steps, safety}){
+function card({title, tag, tagCls, body, steps}){
   const c=document.createElement('div'); c.className='card';
   let html=`<div class="ch">${title}${tag?`<span class="tag ${tagCls||''}">${tag}</span>`:''}</div>`;
   if(body) html+=`<div class="cb">${body}</div>`;
   if(steps) html+=`<div class="steps">${steps.map((s,i)=>`<div class="step"><div class="idx">${i+1}</div><div class="dsc">${s.t}<small>${s.d}</small></div><span class="rt"></span></div>`).join('')}</div>`;
-  if(safety) html+=`<div class="safety ok">${safety}</div>`;
   c.innerHTML=html; msgs.appendChild(c); scroll(); return c;
 }
 async function runStep(my, el, ms, fx, endCls){
@@ -1084,7 +927,7 @@ async function closeAndResume(my){
   $('#progFill').style.height='52%'; $('#pWp').textContent='航点 4/8';
   await sleep(1800); if(stale(my)) return;
 
-  box.innerHTML='🔄 <b>自动收口完成</b>：<br>step1 恢复航线 <b style="color:#7ee2a8;">✓</b><br>step2 检测与告警推送 <b style="color:#7ee2a8;">✓ 已重新开启</b><br>处置权已释放，接管记录已更新（处置人 = 智能体）。';
+  box.innerHTML='🔄 <b>自动收口完成</b>：<br>step1 恢复航线 <b style="color:#7ee2a8;">✓</b><br>step2 检测与告警推送 <b style="color:#7ee2a8;">✓ 已重新开启</b><br>回调 <b>COMPLETED</b> <b style="color:#7ee2a8;">✓</b> 接管记录 <b>status=1 处置完成</b>（handleType=Agent）。';
   setState('任务执行中 · 航点 4/8','run'); setSub('已收口');
   addBot('飞机已回到原巡检任务继续飞行。同一违停事件在<b>去重窗口内不会重复上报</b>。');
   toast('处置完成，航线已自动恢复');

@@ -300,6 +300,11 @@
   .arch .ai2 a:hover{ text-decoration:underline; }
   .arch .ai2.pending em{ color:var(--sub); }
 
+  /* 本期范围提示：把「暂不实现」的下游动作说清楚，避免研发误读原型 */
+  .scopetip{ margin:9px 12px 0; padding:7px 9px; border-radius:8px; font-size:11px; line-height:1.6;
+    color:#8a95a5; background:#0e141c; border:1px dashed #2c3542; }
+  .scopetip b{ color:#b6c2d1; }
+
   .acts{ display:flex; gap:8px; padding:11px 12px; }
   .acts button{ flex:1; font-size:11.5px; padding:7px 6px; border-radius:7px; cursor:pointer; background:#0e141c; border:1px solid var(--line); color:#cfd8e3; }
   .acts button:hover{ border-color:var(--accent); color:#fff; }
@@ -308,6 +313,16 @@
   .closing{ margin:2px 0; padding:9px 11px; border-radius:9px; font-size:12px; line-height:1.7; color:#bcd6ff;
     background:rgba(47,123,255,.1); border:1px solid rgba(47,123,255,.3); }
   .closing b{ color:#dbe9ff; }
+  .closing.stop{ background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.3); color:#ffc9c9; }
+  .closing.stop b{ color:#ffe0e0; }
+
+  /* 处置进行中的人工终止入口，常驻面板底部 */
+  .panelbar{ display:none; padding:10px 14px; border-top:1px solid var(--line); background:#10141b; }
+  .panelbar.on{ display:block; }
+  .stopbtn{ width:100%; padding:10px; border-radius:8px; cursor:pointer; font-size:12.5px;
+    background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.45); color:#ffb3b3; }
+  .stopbtn:hover{ background:rgba(239,68,68,.2); color:#fff; }
+  .panelbar .hint{ font-size:11px; color:#5f6b7c; text-align:center; margin-top:6px; }
 
   /* 底部飞控面板 */
   .bottom{ position:absolute; left:252px; right:0; bottom:0; height:150px; background:var(--panel); border-top:1px solid var(--line); display:flex; flex-direction:column; }
@@ -480,9 +495,13 @@
     <div class="msgs" id="msgs">
       <div class="greet">
         我是<b>处置智能体</b>。边飞边检发现<b>车辆违停</b>后，我会抢占处置权、自动抵近拍摄<b>清晰车牌</b>，
-        并<b>自行判断处置是否结束</b>——完成后主动告知你，把车牌照片<b>归档到告警详情与任务报告</b>，再自动恢复航线。<br>
-        <span style="color:#6b7787;font-size:11.5px;">ⓘ 全过程无需你点【结束处置】；随时可【转人工接管】或【终止】。</span>
+        并<b>自行判断处置是否结束</b>——完成后主动告知你，把车牌照片<b>归档到该告警详情</b>，再自动恢复航线。<br>
+        <span style="color:#6b7787;font-size:11.5px;">ⓘ 无需你点【结束处置】；处置中可随时【转人工接管】或点面板底部【结束处置并恢复航线】终止。</span>
       </div>
+    </div>
+    <div class="panelbar" id="panelBar">
+      <button class="stopbtn" id="btnStop">结束处置并恢复航线</button>
+      <div class="hint">终止后 AI 立即停止下发指令，已拍素材保留</div>
     </div>
   </div>
 
@@ -567,6 +586,7 @@ function setFlow(n){ document.querySelectorAll('.flow .fs').forEach(el=>{
     const s=+el.dataset.s; el.classList.toggle('on', s===n); el.classList.toggle('done', s<n); }); }
 function setState(txt, cls){ stateTxt.innerHTML=txt; stateBar.className='statebar'+(cls?' '+cls:''); }
 function setSub(t){ $('#subStatus').textContent='AI Disposal · '+t; }
+function showStop(on){ $('#panelBar').classList.toggle('on', !!on); }
 
 setInterval(()=>{ if(!document.body.classList.contains('paused')) $('#pSpd').textContent=(4.6+Math.random()*1.4).toFixed(1)+' m/s'; },1000);
 
@@ -574,20 +594,15 @@ setInterval(()=>{ if(!document.body.classList.contains('paused')) $('#pSpd').tex
 function renderAlarm(){
   const wrap=$('#alarmList');
   if(!alarm){ wrap.innerHTML='<div style="font-size:11.5px;color:#5f6b7c;padding:10px 2px;line-height:1.7;">暂无告警，边飞边检进行中…</div>'; return; }
-  const s=alarm.status;
-  const cls = s==='已处置'||s==='已处置（未取到车牌）' ? 'done' : (s==='处置中' ? 'active' : '');
-  const dot = s==='处置中' ? 'run' : (cls==='done' ? 'ok' : '');
-  const stt = s==='处置中' ? 'run' : (cls==='done' ? 'ok' : '');
+  /* 本期范围：告警状态不随处置变化，左侧卡片始终保持「待处置」 */
   wrap.innerHTML = `
-    <div class="acard ${cls}">
-      <div class="ah"><span class="dot2 ${dot}"></span>车辆违停<span class="stt ${stt}">${s}</span></div>
+    <div class="acard">
+      <div class="ah"><span class="dot2"></span>车辆违停<span class="stt">待处置</span></div>
       <div class="meta">K43+250 ~ K43+400 · ${alarm.time}</div>
       <div class="aim" id="aimShot">
         <div class="minicar" style="transform:translate(-50%,-50%) scale(.82)"><div class="b"></div><div class="w"></div><div class="p"></div></div>
         <i class="abox" style="left:34%;top:34%;width:76px;height:44px;"></i>
       </div>
-      ${alarm.plate ? `<div class="plate-mini">🚗 已取证车牌 <b style="font-family:monospace;letter-spacing:1px;">${alarm.plate}</b></div>`
-                    : (alarm.evidence ? `<div class="plate-mini" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);color:#ffd591;">⚠ 未取到车牌 · 建议人工复核</div>` : '')}
       <div class="foot"><button onclick="openAlarmDetail()">告警详情</button><button onclick="openReport()">任务报告</button></div>
     </div>`;
   $('#aimShot').onclick=()=>lightbox('alarm');
@@ -639,7 +654,7 @@ scenario = new URLSearchParams(location.search).get('case') || 'success';
 $('#btnReplay').onclick=()=>triggerAlarm();
 
 function resetAll(){
-  runId++; manualMode=false; clearInterval(cdTimer); closeDialog();
+  runId++; manualMode=false; clearInterval(cdTimer); closeDialog(); showStop(false);
   document.body.classList.remove('paused');
   scene.style.transform='none'; illegal.classList.remove('locked');
   cross.classList.remove('on-target'); $('#zoomTag').classList.remove('on');
@@ -699,26 +714,61 @@ function raceLost(){
 
 function manualTakeover(){
   manualMode=true; alarm.status='处置中'; alarm.way='人工接管'; renderAlarm();
-  openPanel(); setSub('人工接管中'); setFlow(2);
+  openPanel(); setSub('人工接管中'); setFlow(2); showStop(true);
   $('#pCtrl').textContent='人工接管'; $('#ptz').classList.add('ai');
   $('#btnManualResume').disabled=false;
   setState('🕹 人工接管中 · 需手动恢复航线','ai');
   addBot('🕹 已取得设备控制权（接管状态 <b>0 → 1</b>，执行方式 = <b>人工</b>）。<br>人工分支<b>沿用 V1.3</b>：处置完成后请点底部【<b>恢复航线</b>】收口，系统不会自动恢复。');
   toast('已进入人工接管，用底部飞控自行操作');
 }
-$('#btnManualResume').onclick=()=>{
+$('#btnManualResume').onclick=()=>manualFinish();
+function manualFinish(){
   if(!manualMode) return;
-  manualMode=false; $('#btnManualResume').disabled=true; $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
+  manualMode=false; showStop(false);
+  $('#btnManualResume').disabled=true; $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
   alarm.status='已处置'; alarm.way='人工接管'; renderAlarm();
-  addBot('✅ 人工处置结束，已手动恢复航线。<br><span style="color:#8a95a5;font-size:11.5px;">注意：人工分支不会自动归档车牌照片，需人工在告警详情中补充取证素材。</span>');
+  addBot('✅ 人工处置结束，已恢复航线。<br><span style="color:#8a95a5;font-size:11.5px;">注意：人工分支不会自动归档车牌照片，需人工在告警详情中补充取证素材。</span>');
   setFlow(4); resumeRoute(true);
-};
+}
+
+/* ---------------- 人工终止（AI 处置中 / 人工接管中通用） ---------------- */
+$('#btnStop').onclick=()=>abortDisposal();
+async function abortDisposal(){
+  if(manualMode){ manualFinish(); toast('已结束处置并恢复航线'); return; }
+  const my=++runId;            // 递增令牌，正在跑的 AI 流程随即自行终止
+  showStop(false);
+  document.querySelectorAll('#msgs .step.run').forEach(el=>{
+    el.classList.remove('run'); el.classList.add('fail'); el.querySelector('.rt').textContent='已终止';
+  });
+  alarm.status='处置中断'; alarm.way='AI 智能处置（人工终止）'; renderAlarm();
+  setSub('已人工终止');
+  addBot('🛑 已<b>人工终止</b>本次 AI 处置：立即停止下发飞行与云台指令，<b>已拍素材保留</b>；处置权释放，接管记录标记为<b>处置中断</b>。');
+  $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
+  toast('已终止 AI 处置，正在恢复航线');
+
+  const box=document.createElement('div'); box.className='closing stop';
+  box.innerHTML='🔄 <b>终止收口中</b>：<br>step1 恢复航线…';
+  msgs.appendChild(box); scroll();
+  setFlow(3); setState('🔄 step1 · 正在恢复航线','ai');
+  await sleep(1400); if(stale(my)) return;
+
+  document.body.classList.remove('paused');
+  scene.style.transform='none'; illegal.style.transform='none'; illegal.classList.remove('locked');
+  cross.classList.remove('on-target'); $('#zoomTag').classList.remove('on'); $('#pZoom').textContent='1.0x'; $('#pAlt').textContent='42.0 m';
+  box.innerHTML='🔄 <b>终止收口中</b>：<br>step1 恢复航线 <b style="color:#7ee2a8;">✓ 已恢复</b><br>step2 延时 8s 后重开检测与告警推送…';
+  setFlow(4); setState('▶ 航线已恢复 · 检测延时开启中','run');
+  $('#taskState').textContent='● 任务执行中'; $('#progFill').style.height='52%'; $('#pWp').textContent='航点 4/8';
+  await sleep(1800); if(stale(my)) return;
+
+  box.innerHTML='🔄 <b>终止收口完成</b>：<br>step1 恢复航线 <b style="color:#7ee2a8;">✓</b><br>step2 检测与告警推送 <b style="color:#7ee2a8;">✓ 已重新开启</b><br>事件状态：<b>处置中断</b>，素材保留，可再次人工接管补拍。';
+  setState('任务执行中 · 航点 4/8','run'); scroll();
+}
 
 /* ---------------- AI 智能处置主流程 ---------------- */
 async function aiDispose(my){
   const degrade = scenario==='degrade';
   alarm.status='处置中'; alarm.way='AI 智能处置'; renderAlarm();
-  openPanel(); setSub('处置中'); setFlow(2);
+  openPanel(); setSub('处置中'); setFlow(2); showStop(true);
   $('#pCtrl').textContent='智能体'; $('#ptz').classList.add('ai');
   setState('🤖 AI 智能处置中 · 抵近取证','ai');
   toast('已抢占处置权（0 → 1），其他页面弹窗已关闭');
@@ -754,7 +804,7 @@ async function aiDispose(my){
     safety:'✅ 安全校验通过：不在禁飞区 · 高度 18m 合规 · 电量 88% 充足 · 目标距离 26m 在范围内。'
   });
   await sleep(1200); if(stale(my)) return;
-  addBot('安全校验通过，<b>无需你逐步确认</b>，我直接执行。执行中你随时可以【转人工接管】或【终止处置】。');
+  addBot('安全校验通过，<b>无需你逐步确认</b>，我直接执行。执行中你随时可以【转人工接管】，或点面板底部【<b>结束处置并恢复航线</b>】终止。');
   await sleep(700); if(stale(my)) return;
 
   /* --- 阶段三：执行 --- */
@@ -818,7 +868,7 @@ async function fireShutter(){ const f=$('#flash'); f.classList.remove('fire'); v
 
 /* ---------------- 收口 ---------------- */
 async function successClose(my){
-  alarm.plate=PLATE; alarm.evidence=true; alarm.status='已处置';
+  alarm.plate=PLATE; alarm.evidence=true; alarm.status='已处置'; showStop(false);
   addPhase('处置结论 · 智能体自判定');
   addBot('✅ <b>处置已完成</b>。车牌区域清晰度 <b>91%</b>、识别置信度 <b>96%</b>，均达标 → 我判定本次处置<b>可以结束</b>，无需你点任何按钮。');
   const c=document.createElement('div'); c.className='card';
@@ -830,35 +880,30 @@ async function successClose(my){
     <div class="arch" id="archBox">
       <div class="at">📥 正在归档…</div>
       <div class="ai2 pending" data-k="detail"><em>○</em>写入告警详情（照片 + 车牌号）</div>
-      <div class="ai2 pending" data-k="status"><em>○</em>更新告警状态 → 已处置</div>
-      <div class="ai2 pending" data-k="report"><em>○</em>回写任务报告对应条目</div>
       <div class="ai2 pending" data-k="media"><em>○</em>存入巡检数据 / 媒体库</div>
     </div>
+    <div class="scopetip">本期范围：仅归档到<b>告警详情</b>。告警状态更新、任务报告回写<b>暂不实现</b>，左侧告警卡与报告条目保持原样。</div>
     <div class="acts">
       <button onclick="openAlarmDetail()">查看告警详情</button>
-      <button onclick="openReport()">查看任务报告</button>
       <button onclick="toast('如需补拍，请人工接管（会重新暂停航线）')">转人工补拍</button>
     </div>`;
   msgs.appendChild(c); scroll();
   c.querySelector('.evidence').onclick=()=>lightbox('evidence');
-  renderAlarm();
 
   const items=c.querySelectorAll('.ai2');
-  const links={detail:'打开',status:'',report:'打开',media:''};
   for(const it of items){
     await sleep(650); if(stale(my)) return;
     it.classList.remove('pending'); it.querySelector('em').textContent='✓';
-    const k=it.dataset.k;
-    if(links[k]) it.insertAdjacentHTML('beforeend', `<a onclick="${k==='detail'?'openAlarmDetail()':'openReport()'}">${links[k]}</a>`);
+    if(it.dataset.k==='detail') it.insertAdjacentHTML('beforeend', '<a onclick="openAlarmDetail()">打开</a>');
     scroll();
   }
-  c.querySelector('.at').textContent='📥 归档完成 · 4/4';
+  c.querySelector('.at').textContent='📥 归档完成 · 2/2';
   await sleep(500); if(stale(my)) return;
   await closeAndResume(my);
 }
 
 async function degradeClose(my){
-  alarm.plate=null; alarm.evidence=true; alarm.status='已处置（未取到车牌）';
+  alarm.plate=null; alarm.evidence=true; alarm.status='已处置（未取到车牌）'; showStop(false);
   addPhase('处置结论 · 降级收口');
   addBot('⚠ 重试次数已用尽：两次拍摄的车牌清晰度分别为 <b>42%</b> / <b>58%</b>，均低于阈值 70%（车尾被后方护栏与逆光影响）。<br>我判定<b>降级收口</b>：保留最佳一张取证照片，标记<b>建议人工复核</b>，航线照常恢复。');
   const c=document.createElement('div'); c.className='card';
@@ -869,23 +914,21 @@ async function degradeClose(my){
     <div class="conf low"><span>清晰度</span><span class="bar"><i style="width:58%"></i></span><span>58%</span></div>
     <div class="arch" id="archBox" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.05);">
       <div class="at" style="color:#ffd591;border-color:rgba(245,158,11,.2);">📥 正在归档…</div>
-      <div class="ai2 pending" data-k="detail"><em>○</em>写入告警详情（最佳一张取证照片）</div>
-      <div class="ai2 pending" data-k="status"><em>○</em>更新状态 → 已处置（未取到车牌）</div>
-      <div class="ai2 pending" data-k="report"><em>○</em>回写任务报告并标注待复核</div>
+      <div class="ai2 pending" data-k="detail"><em>○</em>写入告警详情（最佳一张取证照片 + 待复核标记）</div>
+      <div class="ai2 pending" data-k="media"><em>○</em>存入巡检数据 / 媒体库</div>
     </div>
+    <div class="scopetip">本期范围：仅归档到<b>告警详情</b>。告警状态更新、任务报告回写<b>暂不实现</b>。</div>
     <div class="acts">
       <button onclick="openAlarmDetail()">查看告警详情</button>
-      <button onclick="openReport()">查看任务报告</button>
       <button onclick="toast('如需补拍，请人工接管（会重新暂停航线）')">转人工补拍</button>
     </div>`;
   msgs.appendChild(c); scroll();
   c.querySelector('.evidence').onclick=()=>lightbox('blur');
-  renderAlarm();
   for(const it of c.querySelectorAll('.ai2')){
     await sleep(650); if(stale(my)) return;
     it.classList.remove('pending'); it.querySelector('em').textContent='✓'; scroll();
   }
-  c.querySelector('.at').textContent='📥 归档完成 · 3/3';
+  c.querySelector('.at').textContent='📥 归档完成 · 2/2';
   await sleep(500); if(stale(my)) return;
   await closeAndResume(my);
 }
@@ -927,12 +970,10 @@ function resumeRoute(silent){
 
 /* ---------------- 告警详情 / 任务报告 ---------------- */
 function openAlarmDetail(){
-  const done = alarm && (alarm.status==='已处置' || alarm.status==='已处置（未取到车牌）');
+  const done = alarm && alarm.evidence;
   const hasPlate = alarm && alarm.plate;
-  const badge = !alarm ? '' :
-    alarm.status==='已处置' ? '<span class="badge ok">已处置</span>' :
-    alarm.status==='已处置（未取到车牌）' ? '<span class="badge warn">已处置（未取到车牌）</span>' :
-    `<span class="badge wait">${alarm.status}</span>`;
+  /* 本期不更新告警状态，详情页状态恒为「待处置」 */
+  const badge = '<span class="badge wait">待处置</span><span style="color:#5f6b7c;font-size:11.5px;margin-left:8px;">本期不随处置更新</span>';
   const actions = (alarm&&alarm.actions.length)
     ? alarm.actions.map((a,i)=>`<div style="font-size:12px;color:#cfd8e3;padding:3px 0;">${i+1}. ${a.t} · <span style="color:${a.s==='成功'?'#7ee2a8':'#ffd591'}">${a.s}</span> · <span style="color:#8a95a5;font-family:monospace;">${a.c}</span></div>`).join('')
     : '<span style="color:#8a95a5;font-size:12px;">暂无处置动作记录</span>';
@@ -948,7 +989,7 @@ function openAlarmDetail(){
       </div>
       <div class="shotwrap">
         ${ done ? `<div style="height:180px;">${evidenceHTML(!hasPlate).replace('class="evidence','style="height:180px" class="evidence')}</div>
-                   <div class="cap">${hasPlate?'取证照片 · AI 智能处置自动归档':'取证照片 · 清晰度不足，建议人工复核'}</div>`
+                   <div class="cap">${hasPlate?'取证照片 · AI 智能处置自动归档（本期范围内）':'取证照片 · 清晰度不足，建议人工复核'}</div>`
                 : `<div style="height:180px;display:flex;align-items:center;justify-content:center;color:#5f6b7c;font-size:12.5px;background:#0e141c;">尚无取证照片</div>
                    <div class="cap">处置完成后自动写入</div>` }
       </div>
@@ -962,40 +1003,30 @@ function openAlarmDetail(){
       <tr><td>处置方式</td><td>${alarm&&alarm.way?alarm.way:'—'}${alarm&&alarm.way==='AI 智能处置'?' · 处置人：<b>智能体</b>（触发人：肖昕昱）':''}</td></tr>
       <tr><td>处置耗时</td><td>${alarm&&alarm.cost?alarm.cost.toFixed(1)+'s':'—'}</td></tr>
       <tr><td>动作记录</td><td>${actions}</td></tr>
-    </table>`;
+    </table>
+    <div class="scopetip" style="margin:14px 0 0;">本期只把<b>取证照片与车牌号</b>写入告警详情；<b>告警状态更新</b>与<b>任务报告回写</b>不在本期范围，状态仍由人工维护。</div>`;
   $('#mAlarm').classList.add('on');
   const ev=$('#alarmDetailBody').querySelector('.evidence');
   if(ev) ev.onclick=()=>lightbox(hasPlate?'evidence':'blur');
 }
 
 function openReport(){
-  const done = alarm && (alarm.status==='已处置' || alarm.status==='已处置（未取到车牌）');
-  const hasPlate = alarm && alarm.plate;
-  const st = !alarm ? '待处置' : alarm.status;
-  const stBadge = st==='已处置' ? '<span class="badge ok">已处置</span>'
-    : st==='已处置（未取到车牌）' ? '<span class="badge warn">已处置·待复核</span>'
-    : `<span class="badge wait">${st}</span>`;
-  const evid = done
-    ? (hasPlate ? `<span class="thumb" id="rptThumb"><span class="plate">粤·D7F92</span></span> <b style="font-family:monospace;">${alarm.plate}</b>`
-                : `<span class="thumb" id="rptThumb" style="filter:blur(1.2px);"><span class="plate">粤·D7F92</span></span> <span style="color:#ffd591;">未识别</span>`)
-    : '<span style="color:#5f6b7c;">—</span>';
-
+  /* 本期不回写报告：条目保持告警原状，仅说明后续版本再接 */
   $('#reportBody').innerHTML = `
     <div style="font-size:12.5px;color:#8a95a5;line-height:1.9;margin-bottom:12px;">
       任务：迎宾大道道路巡检任务 · 检测方式：边飞边检 · 航点 8 · 里程 6.4km<br>
-      本次任务共产生 <b style="color:#e6ebf2;">3</b> 条告警，其中 <b style="color:#e6ebf2;">${done?1:0}</b> 条已完成处置。
+      本次任务共产生 <b style="color:#e6ebf2;">3</b> 条告警。
     </div>
     <table class="rpt">
       <thead><tr><th style="width:36px;">#</th><th>告警类型</th><th>位置</th><th>状态</th><th>取证 / 车牌</th></tr></thead>
       <tbody>
-        <tr class="hi"><td>1</td><td><b>车辆违停</b></td><td>K43+250</td><td>${stBadge}</td><td>${evid}</td></tr>
+        <tr class="hi"><td>1</td><td><b>车辆违停</b></td><td>K43+250</td><td><span class="badge wait">待处置</span></td><td><span style="color:#5f6b7c;">—</span></td></tr>
         <tr><td>2</td><td>路面抛洒物</td><td>K44+120</td><td><span class="badge wait">待处置</span></td><td><span style="color:#5f6b7c;">—</span></td></tr>
         <tr><td>3</td><td>路面裂缝</td><td>K45+030</td><td><span class="badge wait">待处置</span></td><td><span style="color:#5f6b7c;">—</span></td></tr>
       </tbody>
     </table>
-    ${done?`<div class="rewrite">ⓘ 第 1 条为<b>处置后回写</b>：智能体收口时把处置结果、车牌号与车牌照片写入本报告的对应条目，<b>未新建独立报告</b>。</div>`:''}`;
+    <div class="scopetip" style="margin:14px 0 0;">ⓘ <b>本期不回写任务报告</b>：AI 处置产出只归档到告警详情，报告条目的状态与车牌照片保持不变，留待后续版本接入。</div>`;
   $('#mReport').classList.add('on');
-  const th=$('#rptThumb'); if(th) th.onclick=()=>lightbox(hasPlate?'evidence':'blur');
 }
 document.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>$('#'+x.dataset.close).classList.remove('on'));
 document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{ if(e.target===m) m.classList.remove('on'); });

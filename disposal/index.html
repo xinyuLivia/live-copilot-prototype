@@ -273,13 +273,15 @@
     font-family:"PingFang SC","Microsoft YaHei",sans-serif; color:#fff; letter-spacing:1.5px; font-size:15px; font-weight:600;
     box-shadow:0 2px 6px rgba(0,0,0,.5); text-shadow:0 1px 2px rgba(0,0,0,.4); white-space:nowrap; }
   .plate .sep{ width:3px; height:3px; border-radius:50%; background:#fff; margin:0 1px; }
-  .evidence .frame{ position:absolute; left:50%; bottom:16px; transform:translateX(-50%); width:118px; height:34px;
+  /* 识别框放在车尾内部定位，随车尾一起缩放，避免容器高度变化时与车牌错位 */
+  .evidence .rear .frame{ position:absolute; left:50%; bottom:5px; transform:translateX(-50%); width:112px; height:26px;
     border:1.5px solid #22c55e; border-radius:4px; box-shadow:0 0 12px rgba(34,197,94,.5); }
-  .evidence .frame .lb{ position:absolute; top:-17px; left:-1px; font-size:10px; padding:1px 5px; background:#22c55e; color:#06240f; border-radius:3px; white-space:nowrap; }
+  .evidence .rear .frame .lb{ position:absolute; top:-16px; left:-1px; font-size:10px; padding:1px 5px; background:#22c55e; color:#06240f; border-radius:3px; white-space:nowrap; }
   .evidence .stamp{ position:absolute; bottom:6px; right:8px; font-size:10px; color:#9fb0c6; background:rgba(0,0,0,.45); padding:1px 6px; border-radius:3px; }
-  .evidence.blur .rear{ filter:blur(3.2px); } .evidence.blur .plate{ filter:blur(3px); }
-  .evidence.blur .frame{ border-color:var(--warn); box-shadow:0 0 12px rgba(245,158,11,.45); }
-  .evidence.blur .frame .lb{ background:var(--warn); color:#241a00; }
+  .evidence.blur .rear .glass, .evidence.blur .rear .lamp, .evidence.blur .plate{ filter:blur(3px); }
+  .evidence.blur .rear{ filter:blur(1.6px); }
+  .evidence.blur .rear .frame{ border-color:var(--warn); box-shadow:0 0 12px rgba(245,158,11,.45); filter:none; }
+  .evidence.blur .rear .frame .lb{ background:var(--warn); color:#241a00; }
 
   .plateline{ display:flex; align-items:center; gap:10px; margin:10px 12px 0; }
   .plateline .pv{ font-size:18px; font-weight:700; letter-spacing:2px; color:#e6ebf2; font-family:monospace; }
@@ -624,9 +626,9 @@ $('#lightbox').onclick=e=>{ if(e.target.id==='lightbox'||e.target.classList.cont
 function evidenceHTML(blur){
   return `<div class="evidence ${blur?'blur':''}">
     <div class="rear"><div class="glass"></div><div class="lamp l"></div><div class="lamp r"></div>
-      <div class="plate"><span>粤</span><span class="sep"></span><span>B·D7F92</span></div></div>
-    <i class="frame"><span class="lb">${blur?'清晰度 58% · 未达标':'车牌 '+PLATE+' · 0.96'}</span></i>
-    <span class="stamp">${alarm?alarm.time:''} · 6.0x</span></div>`;
+      <div class="plate"><span>粤</span><span class="sep"></span><span>B·D7F92</span></div>
+      <i class="frame"><span class="lb">${blur?'清晰度 58% · 未达标':'车牌 '+PLATE+' · 0.96'}</span></i></div>
+    <span class="stamp">${alarm?alarm.time:''} · ${blur?'8.0x':'6.0x'}</span></div>`;
 }
 
 /* ---------------- 弹窗与倒计时 ---------------- */

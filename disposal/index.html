@@ -264,11 +264,17 @@
 
   /* 处置进行中的人工终止入口，常驻面板底部 */
   .panelbar{ display:none; padding:10px 14px; border-top:1px solid var(--line); background:#10141b; }
-  .panelbar.on{ display:block; }
+  .panelbar.on{ display:flex; flex-direction:column; gap:7px; }
   .stopbtn{ width:100%; padding:10px; border-radius:8px; cursor:pointer; font-size:12.5px;
     background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.45); color:#ffb3b3; }
   .stopbtn:hover{ background:rgba(239,68,68,.2); color:#fff; }
-  .panelbar .hint{ font-size:11px; color:#5f6b7c; text-align:center; margin-top:6px; }
+  .stopbtn.takeover{ background:rgba(91,155,255,.12); border-color:rgba(91,155,255,.5); color:#a9c9ff; }
+  .stopbtn.takeover:hover{ background:rgba(91,155,255,.24); color:#fff; }
+  .panelbar .hint{ font-size:11px; color:#5f6b7c; text-align:center; line-height:1.6; }
+
+  /* 转人工接管时提示飞控面板已可用 */
+  .bottom.hl{ animation:dockhl 1.6s ease-out 2; }
+  @keyframes dockhl{ 0%,100%{ box-shadow:none; } 40%{ box-shadow:0 -1px 0 var(--accent), 0 -14px 28px rgba(91,155,255,.28); } }
 
   /* 底部飞控面板 */
   .bottom{ position:absolute; left:252px; right:0; bottom:0; height:150px; background:var(--panel); border-top:1px solid var(--line); display:flex; flex-direction:column; }
@@ -395,7 +401,7 @@
   </div>
 
   <!-- 底部飞控 -->
-  <div class="bottom">
+  <div class="bottom" id="bottom">
     <div class="btabs"><div class="btab active">飞行直播</div><div class="btab">任务信息</div></div>
     <div class="bbody">
       <div class="params">
@@ -438,7 +444,8 @@
     </div>
     <div class="panelbar" id="panelBar">
       <button class="stopbtn" id="btnStop">结束处置并恢复航线</button>
-      <div class="hint">终止后停止处置，并返回原航线</div>
+      <button class="stopbtn takeover" id="btnStopTakeover">结束处置并人工接管</button>
+      <div class="hint">恢复航线：停止处置，返回原航线<br>人工接管：停止处置，控制权交给你手动操作</div>
     </div>
   </div>
 
@@ -503,6 +510,7 @@ function typing(){ const t=document.createElement('div'); t.className='typing'; 
 function setState(txt, cls){ stateTxt.innerHTML=txt; stateBar.className='statebar'+(cls?' '+cls:''); }
 function setSub(t){ $('#subStatus').textContent='AI Disposal · '+t; }
 function showStop(on){ $('#panelBar').classList.toggle('on', !!on); }
+const aiRunning = () => $('#panelBar').classList.contains('on');
 
 setInterval(()=>{ if(!document.body.classList.contains('paused')) $('#pSpd').textContent=(4.6+Math.random()*1.4).toFixed(1)+' m/s'; },1000);
 
@@ -637,7 +645,22 @@ function manualFinish(){
 }
 /* ---------------- 人工终止（仅 AI 处置中；人工接管用底部【恢复航线】收口） ---------------- */
 $('#btnStop').onclick=()=>abortDisposal();
+$('#btnStopTakeover').onclick=()=>abortToManual();
+/* 终止 AI 并直接接管：Agent 先 FAILED 释放处置权，再把控制权交给人工，不恢复航线 */
+function abortToManual(){
+  if(!aiRunning()) return;     // 仅 AI 执行中可终止，收口后不响应
+  ++runId;                     // 正在跑的 AI 流程凭令牌自行终止
+  showStop(false);
+  document.querySelectorAll('#msgs .closing.running').forEach(el=>{
+    el.classList.remove('running'); el.innerHTML='🛑 AI 处置已终止，转人工接管';
+  });
+  addBot('🛑 已终止 AI 处置：Agent 以 <code>FAILED</code> 回调<b>释放处置权</b>，已拍素材保留。');
+  manualTakeover();
+  $('#bottom').classList.remove('hl'); void $('#bottom').offsetWidth; $('#bottom').classList.add('hl');
+  toast('已终止 AI 处置，控制权已交给你');
+}
 async function abortDisposal(){
+  if(!aiRunning()) return;     // 仅 AI 执行中可终止，收口后不响应
   const my=++runId;            // 递增令牌，正在跑的 AI 流程随即自行终止
   showStop(false);
   document.querySelectorAll('#msgs .closing.running').forEach(el=>{

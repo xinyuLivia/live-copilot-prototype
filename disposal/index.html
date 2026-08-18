@@ -230,19 +230,6 @@
   .card .cb{ padding:10px 12px; font-size:12.5px; line-height:1.6; }
   .card .cb .muted{ color:var(--sub); font-size:11.5px; }
 
-  /* 动作步骤 */
-  .steps{ display:flex; flex-direction:column; }
-  .step{ display:flex; gap:10px; padding:7px 12px; font-size:12.5px; align-items:flex-start; border-top:1px solid rgba(35,42,53,.6); }
-  .step:first-child{ border-top:none; }
-  .step .idx{ width:19px; height:19px; border-radius:50%; background:#0e141c; border:1px solid var(--line); display:flex;align-items:center;justify-content:center;
-    font-size:10px; color:var(--sub); flex-shrink:0; margin-top:1px; }
-  .step.run .idx{ border-color:var(--accent2); color:var(--accent2); animation:pulse 1.1s infinite; }
-  .step.done .idx{ background:rgba(34,197,94,.16); border-color:rgba(34,197,94,.5); color:#7ee2a8; }
-  .step.fail .idx{ background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.5); color:#ffb3b3; }
-  .step .dsc{ line-height:1.5; flex:1; } .step .dsc small{ color:var(--sub); display:block; font-size:11px; margin-top:1px; }
-  .step .rt{ font-size:10.5px; color:var(--sub); font-family:monospace; margin-top:2px; }
-  .step.run .dsc{ color:#fff; }
-
   /* 车牌取证照片 */
   .evidence{ height:150px; position:relative; overflow:hidden; background:linear-gradient(170deg,#20262f 0%,#151a21 100%); cursor:zoom-in; }
   .evidence .rear{ position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); width:190px; height:92px;
@@ -594,7 +581,7 @@ function triggerAlarm(){
   const my=runId;
   const t=new Date();
   const time=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
-  alarm={ status:'待处置', time, plate:null, evidence:false, way:null, actions:[], cost:0 };
+  alarm={ status:'待处置', time, plate:null, evidence:false, way:null };
   renderAlarm();
   // 第一步：告警推送
   toast('检测到车辆违停告警（alarmId 1113-0842）');
@@ -653,8 +640,8 @@ $('#btnStop').onclick=()=>abortDisposal();
 async function abortDisposal(){
   const my=++runId;            // 递增令牌，正在跑的 AI 流程随即自行终止
   showStop(false);
-  document.querySelectorAll('#msgs .step.run').forEach(el=>{
-    el.classList.remove('run'); el.classList.add('fail'); el.querySelector('.rt').textContent='已终止';
+  document.querySelectorAll('#msgs .closing.running').forEach(el=>{
+    el.classList.remove('running'); el.innerHTML='🛑 处置已终止';
   });
   alarm.status='处置中断'; alarm.way='AI 智能处置（人工终止）'; renderAlarm();
   setSub('已人工终止');
@@ -700,73 +687,53 @@ async function aiDispose(my){
   });
   await sleep(1400); if(stale(my)) return;
 
-  /* --- 阶段二：规划 --- */
-  addPhase('动作规划');
-  const planEl=card({
-    title:'处置动作序列', tag:'自动执行', tagCls:'',
-    steps:[
-      {t:'抵近目标机位', d:'相对移动 · 目标点后方偏右 12m · 降高至 18m'},
-      {t:'云台看向目标', d:'俯仰 -32° · 锁定车尾区域'},
-      {t:'变焦至 6.0x', d:'对焦车牌区域，等待画面稳定'},
-      {t:'拍照取证', d:'连拍 2 张，自动挑选最清晰一张'}
-    ]
-  });
-  await sleep(1200); if(stale(my)) return;
+  /* --- 阶段二：执行（不逐条展示动作，只报当前在做什么） --- */
   addBot('<b>无需你逐步确认</b>，我直接执行。执行中你随时可以【转人工接管】，或点面板底部【<b>结束处置并恢复航线</b>】终止。');
   await sleep(700); if(stale(my)) return;
 
-  /* --- 阶段三：执行 --- */
-  addPhase('处置过程');
-  const steps=planEl.querySelectorAll('.step');
+  const run=document.createElement('div'); run.className='closing running';
+  run.innerHTML='🚀 正在抵近违停车辆…'; msgs.appendChild(run); scroll();
 
-  await runStep(my, steps[0], 2000, async()=>{ scene.style.transform='scale(1.45)'; illegal.style.transform='translate(-14px,10px)'; $('#pAlt').textContent='18.0 m'; });
+  await runFx(my, 2000, ()=>{ scene.style.transform='scale(1.45)'; illegal.style.transform='translate(-14px,10px)'; $('#pAlt').textContent='18.0 m'; });
   if(stale(my)) return;
-  await runStep(my, steps[1], 1500, async()=>{ cross.classList.add('on-target'); });
+  run.innerHTML='🎯 已到取证位，正在对准车牌…'; scroll();
+  await runFx(my, 1500, ()=>{ cross.classList.add('on-target'); });
   if(stale(my)) return;
-  await runStep(my, steps[2], 1900, async()=>{
+  await runFx(my, 1900, ()=>{
     scene.style.transform='scale(2.55)'; $('#zoomTag').classList.add('on');
     $('#zoomTag').textContent='🔍 变焦 6.0x'; $('#pZoom').textContent='6.0x';
   });
   if(stale(my)) return;
+  run.innerHTML='📷 正在拍摄取证…'; scroll();
 
   if(degrade){
-    await runStep(my, steps[3], 1500, fireShutter, 'fail');
+    await runFx(my, 1500, fireShutter);
     if(stale(my)) return;
-    addBot('⚠ 第 1 张：车牌区域<b>清晰度 42%</b>（阈值 70%），未达标。<b>自动重试一次</b>：右移 3m 换角度 + 变焦至 8x。');
-    const retry=card({ title:'自动重试 · 换机位补拍', tag:'重试 1/1', tagCls:'warn',
-      steps:[{t:'相对右移 3m', d:'规避后车遮挡'},{t:'变焦至 8.0x', d:'重新对焦车牌'},{t:'补拍 2 张', d:'挑选最清晰一张'}] });
-    const rs=retry.querySelectorAll('.step');
-    await runStep(my, rs[0],1300,async()=>{ illegal.style.transform='translate(6px,6px)'; });
+    run.innerHTML='⚠ 车牌没拍清，正在换个角度补拍…'; scroll();
+    await runFx(my, 1300, ()=>{ illegal.style.transform='translate(6px,6px)'; });
     if(stale(my)) return;
-    await runStep(my, rs[1],1200,async()=>{ scene.style.transform='scale(3.1)'; $('#zoomTag').textContent='🔍 变焦 8.0x'; $('#pZoom').textContent='8.0x'; });
+    await runFx(my, 1200, ()=>{ scene.style.transform='scale(3.1)'; $('#zoomTag').textContent='🔍 变焦 8.0x'; $('#pZoom').textContent='8.0x'; });
     if(stale(my)) return;
-    await runStep(my, rs[2],1500,fireShutter,'fail');
+    await runFx(my, 1500, fireShutter);
     if(stale(my)) return;
+    run.remove();
     await degradeClose(my);
   } else {
-    await runStep(my, steps[3], 1700, fireShutter);
+    await runFx(my, 1700, fireShutter);
     if(stale(my)) return;
+    run.remove();
     await successClose(my);
 }  }
 
 
-function card({title, tag, tagCls, body, steps}){
+function card({title, tag, tagCls, body}){
   const c=document.createElement('div'); c.className='card';
   let html=`<div class="ch">${title}${tag?`<span class="tag ${tagCls||''}">${tag}</span>`:''}</div>`;
   if(body) html+=`<div class="cb">${body}</div>`;
-  if(steps) html+=`<div class="steps">${steps.map((s,i)=>`<div class="step"><div class="idx">${i+1}</div><div class="dsc">${s.t}<small>${s.d}</small></div><span class="rt"></span></div>`).join('')}</div>`;
   c.innerHTML=html; msgs.appendChild(c); scroll(); return c;
-}async function runStep(my, el, ms, fx, endCls){
-  el.classList.add('run'); el.querySelector('.rt').textContent='执行中';
+}async function runFx(my, ms, fx){
   if(fx) await fx();
-  const t0=Date.now();
   await sleep(ms);
-  if(stale(my)) return;
-  el.classList.remove('run'); el.classList.add(endCls||'done');
-  el.querySelector('.rt').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';
-  alarm.actions.push({t:el.querySelector('.dsc').childNodes[0].textContent, s:endCls==='fail'?'未达标':'成功', c:((Date.now()-t0)/1000).toFixed(1)+'s'});
-  alarm.cost += ms/1000;
-  scroll();
 }async function fireShutter(){ const f=$('#flash'); f.classList.remove('fire'); void f.offsetWidth; f.classList.add('fire'); }
 
 /* ---------------- 收口 ---------------- */

@@ -740,7 +740,7 @@ function card({title, tag, tagCls, body}){
 async function successClose(my){
   alarm.plate=PLATE; alarm.evidence=true; alarm.status='已处置'; showStop(false);
   addPhase('处置结论');
-  addBot('✅ <b>处置已完成</b>：已拍到清晰车牌，我判定本次处置<b>可以结束</b>，无需你点任何按钮。');
+  addBot('✅ <b>车牌已拍清楚，取证达标</b>，这次处置到这里就完成了，不用你再确认。');
   const c=document.createElement('div'); c.className='card';
   c.innerHTML = `
     <div class="ch">取证完成</div>
@@ -754,7 +754,7 @@ async function successClose(my){
 async function degradeClose(my){
   alarm.plate=null; alarm.evidence=true; alarm.status='已处置（未取到车牌）'; showStop(false);
   addPhase('处置结论');
-  addBot('⚠ 重试次数已用尽：换机位重拍两次仍未取到达标车牌（车尾被后方护栏与逆光影响）。<br>我判定<b>处置结束</b>：保留拍到的最好一张，航线照常恢复。');
+  addBot('⚠ <b>换角度重拍两次，车牌还是没拍清</b>（车尾被护栏挡住，又逆光）。<br>这次处置我先收尾：保留拍到最好的一张，航线照常恢复。');
   const c=document.createElement('div'); c.className='card';
   c.innerHTML = `
     <div class="ch">取证完成</div>

@@ -663,7 +663,7 @@ async function abortDisposal(){
   $('#taskState').textContent='● 任务执行中'; $('#progFill').style.height='52%'; $('#pWp').textContent='航点 4/8';
   await sleep(1800); if(stale(my)) return;
 
-  box.innerHTML='▶ <b>航线已恢复</b>，检测已重新开启，任务继续飞行。已拍素材保留，可再次人工接管补拍。';
+  box.innerHTML='▶ <b>航线已恢复</b>，检测已重新开启，任务继续飞行。已拍素材保留，您可关闭对话框。';
   setState('任务执行中 · 航点 4/8','run'); scroll();
 }
 /* ---------------- AI 智能处置主流程 ---------------- */
@@ -783,7 +783,7 @@ async function closeAndResume(my){
   $('#progFill').style.height='52%'; $('#pWp').textContent='航点 4/8';
   await sleep(1800); if(stale(my)) return;
 
-  box.innerHTML='▶ <b>航线已恢复</b>，检测已重新开启，任务继续飞行。';
+  box.innerHTML='▶ <b>航线已恢复</b>，检测已重新开启，任务继续飞行。您可关闭对话框。';
   setState('任务执行中 · 航点 4/8','run'); setSub('处置完成');
   toast('处置完成，航线已自动恢复');
   scroll();

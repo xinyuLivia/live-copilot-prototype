@@ -765,7 +765,7 @@ function card({title, tag, tagCls, body}){
 async function successClose(my){
   alarm.plate=PLATE; alarm.evidence=true; alarm.status='已处置'; showStop(false);
   addPhase('处置结论');
-  addBot('✅ <b>车牌已拍清楚，取证达标</b>，这次处置到这里就完成了，不用你再确认。');
+  addBot('✅ <b>车牌已拍清楚，取证完成</b>。');
   const c=document.createElement('div'); c.className='card';
   c.innerHTML = `
     <div class="ch">取证完成</div>

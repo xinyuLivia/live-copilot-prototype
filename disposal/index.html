@@ -632,7 +632,7 @@ function manualTakeover(){
   $('#pCtrl').textContent='人工接管'; $('#ptz').classList.add('ai');
   $('#btnManualResume').disabled=false;
   setState('🕹 人工接管中 · 需手动恢复航线','ai');
-  addBot('🕹 已取得设备控制权，<b>由你手动操作</b>。<br>人工分支<b>沿用 V1.3</b>：处置完成后请点底部【<b>恢复航线</b>】，系统不会自动恢复。');
+  addBot('🕹 已取得设备控制权，<b>由你手动操作</b>。<br>处置完成后请点底部【<b>恢复航线</b>】。');
   toast('已进入人工接管，用底部飞控自行操作');
 }$('#btnManualResume').onclick=()=>manualFinish();
 function manualFinish(){
@@ -654,7 +654,7 @@ function abortToManual(){
   document.querySelectorAll('#msgs .closing.running').forEach(el=>{
     el.classList.remove('running'); el.innerHTML='🛑 AI 处置已终止，转人工接管';
   });
-  addBot('🛑 已终止 AI 处置：Agent 以 <code>FAILED</code> 回调<b>释放处置权</b>，已拍素材保留。');
+  addBot('🛑 已终止 AI 处置。');
   manualTakeover();
   $('#bottom').classList.remove('hl'); void $('#bottom').offsetWidth; $('#bottom').classList.add('hl');
   toast('已终止 AI 处置，控制权已交给你');
@@ -668,7 +668,7 @@ async function abortDisposal(){
   });
   alarm.status='处置中断'; alarm.way='AI 智能处置（人工终止）'; renderAlarm();
   setSub('已人工终止');
-  addBot('🛑 已<b>人工终止</b>本次 AI 处置：立即停止下发飞行与云台指令，<b>已拍素材保留</b>，处置权已释放。');
+  addBot('🛑 已终止 AI 处置，<b>已拍素材保留</b>。');
   $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
   toast('已终止 AI 处置，正在恢复航线');
 

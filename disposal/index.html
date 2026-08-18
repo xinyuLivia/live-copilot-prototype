@@ -688,7 +688,7 @@ async function aiDispose(my){
   await sleep(1400); if(stale(my)) return;
 
   /* --- 阶段二：执行（不逐条展示动作，只报当前在做什么） --- */
-  addBot('<b>无需你逐步确认</b>，我直接执行。执行中你随时可以【转人工接管】，或点面板底部【<b>结束处置并恢复航线</b>】终止。');
+  addBot('<b>无需你逐步确认</b>，我直接执行。想中断的话，点面板底部【<b>结束处置并恢复航线</b>】。');
   await sleep(700); if(stale(my)) return;
 
   const run=document.createElement('div'); run.className='closing running';

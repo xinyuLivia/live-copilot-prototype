@@ -683,7 +683,7 @@ async function aiDispose(my){
   const c1=card({
     title:'目标确认', tag:'车辆违停', tagCls:'ok',
     body:`已在告警帧中锁定目标：<b>1 辆白灰色轿车</b>，停于上行<b>应急车道</b>，车尾朝向与航线方向一致。
-      <div class="muted" style="margin-top:8px;">处置策略：从车<b>后方偏右 12m / 高度 18m</b> 抵近，云台下俯 32°，变焦 6x 拍摄车尾车牌。</div>`
+      <div class="muted" style="margin-top:8px;">处置策略：从<b>车尾侧后方</b>抵近，避开来车方向，<b>拉近拍车尾车牌</b>。</div>`
   });
   await sleep(1400); if(stale(my)) return;
 

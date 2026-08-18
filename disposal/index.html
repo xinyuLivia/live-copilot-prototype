@@ -56,6 +56,18 @@
   .acard .foot button:hover{ border-color:var(--accent); color:#fff; }
   .acard .plate-mini{ display:flex; align-items:center; gap:6px; margin:0 10px 8px; padding:5px 8px; border-radius:7px;
     background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.28); font-size:11px; color:#a7f3c0; }
+  /* 告警卡内的处置记录（取证完成后追加在告警图片下方） */
+  .acard .disp{ margin:0 10px 10px; padding-top:8px; border-top:1px dashed rgba(120,140,170,.28); }
+  .acard .disp .dh{ display:flex; align-items:center; gap:5px; font-size:11px; color:#a7f3c0; line-height:1.5; }
+  .acard .disp .dh.warn{ color:#ffd591; }
+  .acard .disp .dh b{ letter-spacing:.4px; }
+  .acard .disp .dev{ position:relative; height:72px; margin-top:7px; border-radius:7px; overflow:hidden;
+    border:1px solid rgba(34,197,94,.3); cursor:zoom-in; }
+  .acard .disp .dev.warn{ border-color:rgba(245,158,11,.35); }
+  .acard .disp .dev .evidence{ position:absolute; inset:0; height:100%; cursor:zoom-in; }
+  .acard .disp .dev .evidence .rear{ transform:translate(-50%,-50%) scale(.6); }
+  .acard .disp .dev .evidence .stamp{ font-size:8.5px; bottom:4px; right:5px; padding:0 4px; }
+  .acard .disp .dev .evidence .frame .lb{ font-size:8.5px; top:-13px; padding:0 4px; }
 
   /* ---------- 视频区 ---------- */
   .video-area{ position:absolute; left:252px; right:0; top:0; bottom:150px; overflow:hidden;
@@ -520,7 +532,15 @@ setInterval(()=>{ if(!document.body.classList.contains('paused')) $('#pSpd').tex
 function renderAlarm(){
   const wrap=$('#alarmList');
   if(!alarm){ wrap.innerHTML='<div style="font-size:11.5px;color:#5f6b7c;padding:10px 2px;line-height:1.7;">暂无告警，边飞边检进行中…</div>'; return; }
-  /* 本期范围：左侧告警卡沿用 V1.3，不随处置变化，不展示状态标签与时间 */
+  /* 告警卡沿用 V1.3，不展示状态标签与时间；取证完成后在告警图片下方追加处置记录 */
+  const gotPlate = !!(alarm.evidence && alarm.plate);
+  const disp = alarm.evidence ? `
+      <div class="disp">
+        <div class="dh${gotPlate?'':' warn'}">${gotPlate
+          ? `✅ AI 处置完成，车牌号：<b>${alarm.plate}</b>`
+          : '⚠ AI 处置完成，未取到清晰车牌'}</div>
+        <div class="dev${gotPlate?'':' warn'}" id="evShot">${evidenceHTML(!gotPlate)}</div>
+      </div>` : '';
   wrap.innerHTML = `
     <div class="acard">
       <div class="ah"><span class="dot2"></span>车辆违停</div>
@@ -528,9 +548,10 @@ function renderAlarm(){
       <div class="aim" id="aimShot">
         <div class="minicar" style="transform:translate(-50%,-50%) scale(.82)"><div class="b"></div><div class="w"></div><div class="p"></div></div>
         <i class="abox" style="left:34%;top:34%;width:76px;height:44px;"></i>
-      </div>
+      </div>${disp}
     </div>`;
   $('#aimShot').onclick=()=>lightbox('alarm');
+  const ev=$('#evShot'); if(ev) ev.onclick=()=>lightbox(gotPlate?'evidence':'blur');
 }
 /* ---------------- 灯箱 ---------------- */
 function lightbox(kind){
@@ -762,7 +783,7 @@ function card({title, tag, tagCls, body}){
 
 /* ---------------- 收口 ---------------- */
 async function successClose(my){
-  alarm.plate=PLATE; alarm.evidence=true; alarm.status='已处置'; showStop(false);
+  alarm.plate=PLATE; alarm.evidence=true; alarm.status='已处置'; showStop(false); renderAlarm();
   addPhase('处置结论');
   addBot('✅ <b>车牌已拍清楚，取证完成</b>。');
   const c=document.createElement('div'); c.className='card';
@@ -776,7 +797,7 @@ async function successClose(my){
   await closeAndResume(my);
 }
 async function degradeClose(my){
-  alarm.plate=null; alarm.evidence=true; alarm.status='已处置（未取到车牌）'; showStop(false);
+  alarm.plate=null; alarm.evidence=true; alarm.status='已处置（未取到车牌）'; showStop(false); renderAlarm();
   addPhase('处置结论');
   addBot('⚠ <b>换角度重拍两次，车牌还是没拍清</b>（车尾被护栏挡住，又逆光）。<br>这次处置我先收尾：保留拍到最好的一张，航线照常恢复。');
   const c=document.createElement('div'); c.className='card';

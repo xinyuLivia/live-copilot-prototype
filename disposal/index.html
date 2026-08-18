@@ -60,7 +60,7 @@
   /* ---------- 视频区 ---------- */
   .video-area{ position:absolute; left:252px; right:0; top:0; bottom:150px; overflow:hidden;
     background:linear-gradient(180deg,#0e131a 0%, #0a0e14 100%); }
-  .scene{ position:absolute; inset:0; transform-origin:58% 62%; transition:transform 1.5s cubic-bezier(.4,0,.2,1); }
+  .scene{ position:absolute; inset:0; transform-origin:58% 62%; transition:transform 2.6s cubic-bezier(.4,0,.2,1); }
   .sky{ position:absolute; left:-10%; right:-10%; top:-6%; bottom:-6%;
     background: radial-gradient(1000px 420px at 55% -12%, #17324d 0%, transparent 60%), linear-gradient(180deg,#0e131a 0%, #0a0e14 100%);
     animation:hover 6s ease-in-out infinite; }
@@ -87,7 +87,7 @@
   @keyframes run1{ from{transform:translateX(0) scale(.7);opacity:.5;} to{transform:translateX(52vw) scale(1.25);opacity:1;} }
 
   /* 违停车辆（静止在应急车道） */
-  .illegal{ position:absolute; left:59.5%; top:60%; width:54px; height:30px; z-index:3; transition:transform 1.5s cubic-bezier(.4,0,.2,1); }
+  .illegal{ position:absolute; left:59.5%; top:60%; width:54px; height:30px; z-index:3; transition:transform 2.6s cubic-bezier(.4,0,.2,1); }
   .illegal .body{ position:absolute; inset:0; border-radius:5px 5px 7px 7px; background:linear-gradient(180deg,#5d6c82,#3d4759);
     box-shadow:0 3px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.14); }
   .illegal .win{ position:absolute; left:8px; right:8px; top:4px; height:9px; border-radius:3px; background:#1e2836; }
@@ -494,6 +494,8 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 let scenario='success';
 let alarm = null;          // 当前告警对象
 let cdTimer=null, manualMode=false;
+/* 演示节奏：处置各阶段时长的统一倍数，调这一个值即可整体加快/放慢 */
+const PACE = 1.8;
 /* 每次重放递增，旧的异步流程凭 runId 自行终止，避免两次演示串场 */
 let runId = 0;
 const stale = id => id !== runId;
@@ -699,7 +701,7 @@ async function aiDispose(my){
   toast('已进入 AI 智能处置 · 其他页面弹窗已关闭');
 
   addBot('🔒 <b>已接管这条告警</b>，处置期间其他人无法再接管。开始分析…');
-  let t=typing(); await sleep(1100); t.remove(); if(stale(my)) return;
+  let t=typing(); await sleep(1100*PACE); t.remove(); if(stale(my)) return;
 
   /* --- 阶段一：分析 --- */
   addPhase('分析过程');
@@ -708,11 +710,11 @@ async function aiDispose(my){
     body:`已在告警帧中锁定目标：<b>1 辆白灰色轿车</b>，停于上行<b>应急车道</b>，车尾朝向与航线方向一致。
       <div class="muted" style="margin-top:8px;">处置策略：从<b>车尾侧后方</b>抵近，避开来车方向，<b>拉近拍车尾车牌</b>。</div>`
   });
-  await sleep(1400); if(stale(my)) return;
+  await sleep(1400*PACE); if(stale(my)) return;
 
   /* --- 阶段二：执行（不逐条展示动作，只报当前在做什么） --- */
   addBot('<b>无需你逐步确认</b>，我直接执行。想中断的话，点面板底部【<b>结束处置并恢复航线</b>】。');
-  await sleep(700); if(stale(my)) return;
+  await sleep(700*PACE); if(stale(my)) return;
 
   const run=document.createElement('div'); run.className='closing running';
   run.innerHTML='🚀 正在抵近违停车辆…'; msgs.appendChild(run); scroll();
@@ -756,7 +758,7 @@ function card({title, tag, tagCls, body}){
   c.innerHTML=html; msgs.appendChild(c); scroll(); return c;
 }async function runFx(my, ms, fx){
   if(fx) await fx();
-  await sleep(ms);
+  await sleep(ms*PACE);
 }async function fireShutter(){ const f=$('#flash'); f.classList.remove('fire'); void f.offsetWidth; f.classList.add('fire'); }
 
 /* ---------------- 收口 ---------------- */

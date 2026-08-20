@@ -718,7 +718,7 @@ async function aiDispose(my){
   alarm.status='处置中'; alarm.way='AI 智能处置'; renderAlarm();
   openPanel(); setSub('处置中');showStop(true);
   $('#pCtrl').textContent='智能体'; $('#ptz').classList.add('ai');
-  setState('🤖 AI 智能处置中 · 抵近取证','ai');
+  setState('🤖 AI 智能处置中 · 追踪取证','ai');
   toast('已进入 AI 智能处置 · 其他页面弹窗已关闭');
 
   addBot('🔒 <b>已接管这条告警</b>，处置期间其他人无法再接管。开始分析…');
@@ -737,11 +737,10 @@ async function aiDispose(my){
   await sleep(700*PACE); if(stale(my)) return;
 
   const run=document.createElement('div'); run.className='closing running';
-  run.innerHTML='🚀 正在抵近违停车辆…'; msgs.appendChild(run); scroll();
+  run.innerHTML='🎯 正在追踪目标…'; msgs.appendChild(run); scroll();
 
   await runFx(my, 2000, ()=>{ scene.style.transform='scale(1.45)'; illegal.style.transform='translate(-14px,10px)'; $('#pAlt').textContent='18.0 m'; });
   if(stale(my)) return;
-  run.innerHTML='🎯 已到取证位，正在对准车牌…'; scroll();
   await runFx(my, 1500, ()=>{ cross.classList.add('on-target'); });
   if(stale(my)) return;
   await runFx(my, 1900, ()=>{
@@ -749,22 +748,32 @@ async function aiDispose(my){
     $('#zoomTag').textContent='🔍 变焦 6.0x'; $('#pZoom').textContent='6.0x';
   });
   if(stale(my)) return;
-  run.innerHTML='📷 正在拍摄取证…'; scroll();
+  run.innerHTML='📷 在拍照取证…'; scroll();
 
   if(degrade){
     await runFx(my, 1500, fireShutter);
+    if(stale(my)) return;
+    run.innerHTML='🔍 识别车牌中…'; scroll();
+    await runFx(my, 1200, null);
     if(stale(my)) return;
     run.innerHTML='⚠ 车牌没拍清，正在换个角度补拍…'; scroll();
     await runFx(my, 1300, ()=>{ illegal.style.transform='translate(6px,6px)'; });
     if(stale(my)) return;
     await runFx(my, 1200, ()=>{ scene.style.transform='scale(3.1)'; $('#zoomTag').textContent='🔍 变焦 8.0x'; $('#pZoom').textContent='8.0x'; });
     if(stale(my)) return;
+    run.innerHTML='📷 在拍照取证…'; scroll();
     await runFx(my, 1500, fireShutter);
+    if(stale(my)) return;
+    run.innerHTML='🔍 识别车牌中…'; scroll();
+    await runFx(my, 1300, null);
     if(stale(my)) return;
     run.remove();
     await degradeClose(my);
   } else {
     await runFx(my, 1700, fireShutter);
+    if(stale(my)) return;
+    run.innerHTML='🔍 识别车牌中…'; scroll();
+    await runFx(my, 1600, null);
     if(stale(my)) return;
     run.remove();
     await successClose(my);

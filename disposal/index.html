@@ -591,7 +591,7 @@ function evidenceHTML(blur){
   return `<div class="evidence ${blur?'blur':''}">
     <div class="rear"><div class="glass"></div><div class="lamp l"></div><div class="lamp r"></div>
       <div class="plate"><span>粤</span><span class="sep"></span><span>B·D7F92</span></div>
-      <i class="frame"><span class="lb">${blur?'清晰度 58% · 未达标':'车牌 '+PLATE+' · 0.96'}</span></i></div>
+      <i class="frame"><span class="lb">${blur?'未取到清晰车牌':'车牌 '+PLATE}</span></i></div>
     <span class="stamp">${alarm?alarm.time:''} · ${blur?'8.0x':'6.0x'}</span></div>`;
 }
 /* ---------------- 弹窗与倒计时 ---------------- */

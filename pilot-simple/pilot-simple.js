@@ -5,15 +5,18 @@ const fab=$('#fab'), panel=$('#panel'), msgs=$('#msgs'), input=$('#input'), chip
 
 /* 无人机状态 */
 const st = { alt:30.0, zoom:1.0, gimbal:0, heading:0, spd:0.0 };
-let cur='auto';          // 控制源：auto / ai / manual
-let running=null;        // 正在执行的 AI 序列
+let cur='auto';          // 控制源：auto / ai / manual / dispose
+let running=null;        // 正在执行的 AI 操控序列
+let disposing=false;     // 是否处于 AI 智能处置中（处置期间操控被锁定）
+let dispTimer=null;
+const PLACEHOLDER='下达飞行 / 云台指令（可组合）…';
 
 /* ---------- 控制源 ---------- */
 function setSource(s){
   cur=s;
-  const map={auto:['任务自动 · 巡检执行中','src-auto'], ai:['AI 操控','src-ai'], manual:['手动操控','src-manual']};
+  const map={auto:['任务自动 · 巡检执行中','src-auto'], ai:['AI 操控','src-ai'], manual:['手动操控','src-manual'], dispose:['AI 处置中 · 操控已锁定','src-dispose']};
   const b=$('#srcBadge'); b.textContent='控制源：'+map[s][0]; b.className='srcbadge '+map[s][1];
-  $('#resumeBtn').style.display = s==='auto'?'none':'inline-flex';
+  $('#resumeBtn').style.display = (s==='auto'||s==='dispose')?'none':'inline-flex';
 }
 $('#resumeBtn').onclick=()=>{ if(running) abortAI('交还自动任务'); setSource('auto'); toast('已交还自动巡检任务'); };
 
@@ -219,6 +222,7 @@ function abortAI(reason){
   running=null;
 }
 function doEstop(reason){
+  if(disposing){ toast('处置进行中，操控暂不可用'); return; }
   if(running) abortAI(reason);
   applyAction('estop'); setSource('manual');
   openPanel(); addBot('■ <b>已急停</b>：立即原地悬停，进行中的指令已终止<span class="tm"> · '+nowTime()+'</span>。');
@@ -226,8 +230,67 @@ function doEstop(reason){
 }
 $('#estopFloat').onclick=()=>doEstop('急停按钮');
 
+/* ============ 与「智能处置」互斥：处置期间锁定操控 ============ */
+/* 共用同一对话框：告警触发 AI 处置 → 操控入口全部锁定；处置收口后恢复操控 */
+function enterDisposal(){
+  if(disposing) return;
+  if(running) abortAI('告警处置抢占');
+  disposing=true;
+  openPanel();
+  document.body.classList.add('oplocked');
+  manual.classList.remove('open'); $('#openManual').classList.remove('on');
+  setSource('dispose');
+  input.placeholder='处置进行中，操控暂不可用…';
+  const c=document.createElement('div'); c.className='dispcard';
+  c.innerHTML=`
+    <div class="dt">🔒 检测到车辆违停 · AI 智能处置中</div>
+    <div class="ds">处置期间<b>操控暂不可用</b>。智能体正在按画面理解<b>追踪目标 → 拍照取证 → 识别车牌</b>，拍清楚会自动收尾并恢复航线。</div>
+    <div class="rt" id="dispRt">🎯 正在追踪目标…</div>
+    <div class="da">
+      <button id="dispResume">结束处置并恢复航线</button>
+      <button id="dispTakeover">结束处置并人工接管</button>
+    </div>`;
+  msgs.appendChild(c); scroll();
+  c.querySelector('#dispResume').onclick=()=>exitDisposal('resume', c);
+  c.querySelector('#dispTakeover').onclick=()=>exitDisposal('manual', c);
+  toast('已进入 AI 智能处置，操控已锁定');
+  const steps=['🎯 正在追踪目标…','📷 正在拍照取证…','🔍 识别车牌中…'];
+  let k=0; clearInterval(dispTimer);
+  dispTimer=setInterval(()=>{
+    k++;
+    if(k<steps.length){ const rt=$('#dispRt'); if(rt) rt.textContent=steps[k]; }
+    else { clearInterval(dispTimer); if(disposing) exitDisposal('done', c); }
+  }, 1800);
+}
+function exitDisposal(mode, card){
+  if(!disposing) return;
+  disposing=false; clearInterval(dispTimer);
+  document.body.classList.remove('oplocked');
+  input.placeholder=PLACEHOLDER;
+  const da=card.querySelector('.da'); if(da) da.remove();
+  const dt=card.querySelector('.dt'), ds=card.querySelector('.ds'), rt=card.querySelector('#dispRt');
+  if(mode==='manual'){
+    setSource('manual');
+    manual.classList.add('open'); $('#openManual').classList.add('on');
+    if(dt) dt.innerHTML='✅ 已结束处置 · 转人工接管';
+    if(ds) ds.innerHTML='已取得设备控制权，<b>操控已恢复</b>；可用「操控」面板或直接下达指令。';
+    if(rt) rt.remove();
+    addBot('✅ 已结束处置，取得控制权，<b>操控已恢复</b>。');
+    toast('已转人工接管，操控已恢复');
+  } else {
+    setSource('auto');
+    if(dt) dt.innerHTML = (mode==='done') ? '✅ 车牌已拍清楚 · 取证完成' : '✅ 已结束处置';
+    if(ds) ds.innerHTML='航线已恢复，任务继续飞行，<b>操控已恢复</b>。可继续下达飞行 / 云台指令。';
+    if(rt) rt.remove();
+    addBot((mode==='done'?'✅ 取证完成，':'✅ 已结束处置，')+'航线已恢复，<b>操控已恢复</b>。');
+    toast('处置结束，操控已恢复');
+  }
+}
+$('#btnDemoDisp').onclick=enterDisposal;
+
 /* ============ 手动接管 ============ */
 function takeover(){
+  if(disposing){ toast('处置进行中，操控暂不可用'); return; }
   if(cur==='manual') return;
   if(running) abortAI('切换手动操控');
   setSource('manual'); toast('已切换为手动操控');
@@ -245,6 +308,7 @@ $('#mZoom').addEventListener('input',e=>{ takeover(); st.zoom=(+e.target.value)/
 
 /* ============ 发送 ============ */
 function send(){
+  if(disposing){ toast('处置进行中，操控暂不可用'); return; }
   const q=input.value.trim(); if(!q) return;
   if(!panel.classList.contains('open')) openPanel();
   addUser(q); input.value='';

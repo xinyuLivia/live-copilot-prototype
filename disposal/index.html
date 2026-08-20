@@ -126,6 +126,13 @@
   .zoom-tag{ position:absolute; top:36px; left:12px; font-size:12px; color:#bfe0ff; background:rgba(47,123,255,.22);
     border:1px solid rgba(47,123,255,.45); padding:2px 8px; border-radius:4px; opacity:0; transition:.3s; }
   .zoom-tag.on{ opacity:1; }
+  /* 处置期间检测不停：算法持续运行，只是期间不再上报新告警 */
+  .det-tag{ position:absolute; top:62px; left:12px; font-size:11.5px; color:#a7e8bf; background:rgba(34,197,94,.16);
+    border:1px solid rgba(34,197,94,.42); padding:2px 8px; border-radius:4px; opacity:0; transition:.3s; }
+  .det-tag.on{ opacity:1; }
+  .det-tag i{ display:inline-block; width:6px; height:6px; border-radius:50%; background:#22c55e; margin-right:5px;
+    vertical-align:1px; animation:detblink 1.4s infinite; }
+  @keyframes detblink{ 50%{ opacity:.25; } }
   .stake{ position:absolute; bottom:12px; left:12px; font-size:11.5px; color:#9fb0c6; background:rgba(0,0,0,.42); padding:3px 8px; border-radius:4px; }
 
   /* 流程 stepper */
@@ -411,6 +418,7 @@
       <div class="cross" id="cross"></div>
       <div class="video-tag">📡 任务实时回传 · 广角 · 1080P/25fps</div>
       <div class="zoom-tag" id="zoomTag">🔍 变焦 1.0x</div>
+      <div class="det-tag" id="detTag"><i></i>检测持续运行 · 处置期间不上报新告警</div>
       <div class="stake" id="stakeTag">📍 桩号 K43+250 · 迎宾大道上行</div>
     </div>
 
@@ -620,7 +628,7 @@ function resetAll(){
   scene.style.transform='none'; illegal.classList.remove('locked');
   cross.classList.remove('on-target'); $('#zoomTag').classList.remove('on');
   $('#pZoom').textContent='1.0x'; $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
-  $('#bottom').classList.remove('locked','hl');
+  $('#bottom').classList.remove('locked','hl'); $('#detTag').classList.remove('on');
   $('#btnManualResume').disabled=true; $('#progFill').style.height='38%';
   msgs.querySelectorAll('.phase,.bubble,.card,.typing,.closing,.analyzing').forEach(e=>e.remove());
   setState('任务执行中 · 航点 3/8','run'); setSub('待触发');
@@ -672,6 +680,7 @@ function manualTakeover(){
   manualMode=true; alarm.status='处置中'; alarm.way='人工接管'; renderAlarm();
   openPanel(); setSub('人工接管');showStop(false);
   $('#pCtrl').textContent='人工接管'; $('#bottom').classList.remove('locked'); $('#ptz').classList.add('ai');
+  $('#detTag').classList.add('on');
   $('#btnManualResume').disabled=false;
   setState('🕹 人工接管中 · 需手动恢复航线','ai');
   addBot('🕹 已取得设备控制权，<b>由你手动操作</b>。<br>处置完成后请点击【<b>恢复航线</b>】。');
@@ -713,7 +722,7 @@ async function abortDisposal(){
   alarm.status='处置中断'; alarm.way='AI 智能处置（人工终止）'; renderAlarm();
   setSub('终止处置');
   addBot('🛑 已终止 AI 处置。');
-  $('#pCtrl').textContent='航线自动'; $('#bottom').classList.remove('locked');
+  $('#pCtrl').textContent='航线自动'; $('#bottom').classList.remove('locked'); $('#detTag').classList.remove('on');
   toast('已终止 AI 处置，正在恢复航线');
 
   const box=document.createElement('div'); box.className='closing stop';
@@ -728,7 +737,7 @@ async function abortDisposal(){
   $('#taskState').textContent='● 任务执行中'; $('#progFill').style.height='52%'; $('#pWp').textContent='航点 4/8';
   await sleep(1400); if(stale(my)) return;
 
-  box.innerHTML='▶ <b>航线已恢复</b>，检测已重新开启，任务继续飞行。您可关闭对话框。';
+  box.innerHTML='▶ <b>航线已恢复</b>，任务继续飞行。您可关闭对话框。';
   setState('任务执行中 · 航点 4/8','run'); scroll();
 }
 /* ---------------- AI 智能处置主流程 ---------------- */
@@ -737,6 +746,7 @@ async function aiDispose(my){
   alarm.status='处置中'; alarm.way='AI 智能处置'; renderAlarm();
   openPanel(); setSub('处置中');showStop(true);
   $('#pCtrl').textContent='智能体'; $('#bottom').classList.add('locked');   // 飞控操作置灰
+  $('#detTag').classList.add('on');   // 检测算法不停，仅处置期间不上报新告警
   setState('🤖 AI 智能处置中 · 追踪取证','ai');
   toast('已进入 AI 智能处置 · 其他页面弹窗已关闭');
 
@@ -845,22 +855,20 @@ async function closeAndResume(my){
   await sleep(1400); if(stale(my)) return;
 
   document.body.classList.remove('paused');
-  $('#pCtrl').textContent='航线自动'; $('#bottom').classList.remove('locked');
+  $('#pCtrl').textContent='航线自动'; $('#bottom').classList.remove('locked'); $('#detTag').classList.remove('on');
   scene.style.transform='none'; illegal.style.transform='none'; illegal.classList.remove('locked');
   cross.classList.remove('on-target'); $('#zoomTag').classList.remove('on'); $('#pZoom').textContent='1.0x'; $('#pAlt').textContent='42.0 m';
-  box.innerHTML='▶ <b>航线已恢复</b>，检测正在重新开启…';
-  setState('▶ 航线已恢复 · 检测重新开启中','run');
   $('#taskState').textContent='● 任务执行中';
   $('#progFill').style.height='52%'; $('#pWp').textContent='航点 4/8';
-  await sleep(1800); if(stale(my)) return;
+  await sleep(1200); if(stale(my)) return;
 
-  box.innerHTML='▶ <b>航线已恢复</b>，检测已重新开启，任务继续飞行。您可关闭对话框。';
+  box.innerHTML='▶ <b>航线已恢复</b>，任务继续飞行。您可关闭对话框。';
   setState('任务执行中 · 航点 4/8','run'); setSub('处置完成');
   toast('处置完成，航线已自动恢复');
   scroll();
 }
 function resumeRoute(silent){
-  document.body.classList.remove('paused');
+  document.body.classList.remove('paused'); $('#detTag').classList.remove('on');
   illegal.classList.remove('locked');
   $('#taskState').textContent='● 任务执行中';
   setState('任务执行中 · 航点 4/8','run');

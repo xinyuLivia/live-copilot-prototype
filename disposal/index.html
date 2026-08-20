@@ -284,6 +284,9 @@
   .closing b{ color:#dbe9ff; }
   .closing.stop{ background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.3); color:#ffc9c9; }
   .closing.stop b{ color:#ffe0e0; }
+  /* 执行期状态文字：每次更新滚动进场 */
+  .closing .rtxt{ display:inline-block; animation:rollin .34s ease; }
+  @keyframes rollin{ from{ transform:translateY(7px); opacity:0; } }
 
   /* 处置进行中的人工终止入口，常驻面板底部 */
   .panelbar{ display:none; padding:10px 14px; border-top:1px solid var(--line); background:#10141b; }
@@ -309,6 +312,8 @@
   .ptz{ display:grid; grid-template-columns:repeat(3,26px); grid-template-rows:repeat(2,24px); gap:3px; }
   .ptz div{ background:var(--panel2); border:1px solid var(--line); border-radius:4px; font-size:11px; display:flex;align-items:center;justify-content:center;color:#9fb0c6; }
   .ptz.ai div{ border-color:rgba(47,123,255,.5); color:var(--accent2); }
+  /* AI 处置期间：飞控操作置灰不可点 */
+  .bottom.locked .ptz, .bottom.locked .ctrls{ opacity:.35; pointer-events:none; filter:grayscale(1); }
   .ctrls{ display:flex; gap:10px; margin-left:auto; }
   .cbtn{ background:var(--panel2); border:1px solid var(--line); color:#cfd8e3; font-size:12px; padding:8px 12px; border-radius:6px; cursor:pointer; }
   .cbtn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
@@ -455,7 +460,7 @@
   <div class="panel" id="panel">
     <div class="phead">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v1H7a2 2 0 0 0-2 2v3a5 5 0 0 0 5 5h4a5 5 0 0 0 5-5V8a2 2 0 0 0-2-2h-2V5a3 3 0 0 0-3-3z"/><circle cx="9" cy="11" r="1" fill="#fff"/><circle cx="15" cy="11" r="1" fill="#fff"/></svg></div>
-      <div><div class="t">智能处置</div><div class="s" id="subStatus">Live Copilot · 待触发</div></div>
+      <div><div class="t">实况智能体-Live Copilot</div><div class="s" id="subStatus">待触发</div></div>
       <span class="x" id="closeBtn">×</span>
     </div>
     <div class="msgs" id="msgs">
@@ -533,7 +538,9 @@ function addBot(html){ const b=document.createElement('div'); b.className='bubbl
 function addPhase(t){ const p=document.createElement('div'); p.className='phase'; p.textContent=t; msgs.appendChild(p); scroll(); return p; }
 function typing(){ const t=document.createElement('div'); t.className='typing'; t.innerHTML='<i></i><i></i><i></i>'; msgs.appendChild(t); scroll(); return t; }
 function setState(txt, cls){ stateTxt.innerHTML=txt; stateBar.className='statebar'+(cls?' '+cls:''); }
-function setSub(t){ $('#subStatus').textContent='Live Copilot · '+t; }
+function setSub(t){ $('#subStatus').textContent=t; }
+/* 执行期实时状态：跑马灯式滚动更新 */
+function setRun(el, html){ el.innerHTML=`<span class="rtxt">${html}</span>`; scroll(); }
 function showStop(on){ $('#panelBar').classList.toggle('on', !!on); }
 const aiRunning = () => $('#panelBar').classList.contains('on');
 
@@ -572,7 +579,7 @@ function lightbox(kind){
     $('#lbCap').textContent='取证照片 · 车牌 '+PLATE+' · 变焦 6.0x';
   } else if(kind==='blur'){
     box.innerHTML = evidenceHTML(true);
-    $('#lbCap').textContent='取证素材 · 未取到达标车牌';
+    $('#lbCap').textContent='取证素材 · 未取到清晰车牌';
   } else {
     box.innerHTML = `<div style="position:absolute;inset:0;background:linear-gradient(160deg,#2b3038,#171b22);">
       <div class="minicar" style="transform:translate(-50%,-50%) scale(2.2)"><div class="b"></div><div class="w"></div><div class="p"></div></div>
@@ -613,6 +620,7 @@ function resetAll(){
   scene.style.transform='none'; illegal.classList.remove('locked');
   cross.classList.remove('on-target'); $('#zoomTag').classList.remove('on');
   $('#pZoom').textContent='1.0x'; $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
+  $('#bottom').classList.remove('locked','hl');
   $('#btnManualResume').disabled=true; $('#progFill').style.height='38%';
   msgs.querySelectorAll('.phase,.bubble,.card,.typing,.closing,.analyzing').forEach(e=>e.remove());
   setState('任务执行中 · 航点 3/8','run'); setSub('待触发');
@@ -662,17 +670,18 @@ function raceLost(){
 }
 function manualTakeover(){
   manualMode=true; alarm.status='处置中'; alarm.way='人工接管'; renderAlarm();
-  openPanel(); setSub('人工接管中');showStop(false);
-  $('#pCtrl').textContent='人工接管'; $('#ptz').classList.add('ai');
+  openPanel(); setSub('人工接管');showStop(false);
+  $('#pCtrl').textContent='人工接管'; $('#bottom').classList.remove('locked'); $('#ptz').classList.add('ai');
   $('#btnManualResume').disabled=false;
   setState('🕹 人工接管中 · 需手动恢复航线','ai');
-  addBot('🕹 已取得设备控制权，<b>由你手动操作</b>。<br>处置完成后请点底部【<b>恢复航线</b>】。');
+  addBot('🕹 已取得设备控制权，<b>由你手动操作</b>。<br>处置完成后请点击【<b>恢复航线</b>】。');
   toast('已进入人工接管，用底部飞控自行操作');
 }$('#btnManualResume').onclick=()=>manualFinish();
 function manualFinish(){
   if(!manualMode) return;
   manualMode=false; showStop(false);
   $('#btnManualResume').disabled=true; $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
+  setSub('处置完成');
   alarm.status='已处置'; alarm.way='人工接管'; renderAlarm();
   addBot('✅ 人工处置结束，已恢复航线。<br><span style="color:#8a95a5;font-size:11.5px;">注意：人工分支不会自动拍摄与归档车牌照片。</span>');
   resumeRoute(true);
@@ -690,6 +699,7 @@ function abortToManual(){
   });
   addBot('🛑 已终止 AI 处置。');
   manualTakeover();
+  closePanel();                // 关闭智能体窗口，把注意力交回操控面板
   $('#bottom').classList.remove('hl'); void $('#bottom').offsetWidth; $('#bottom').classList.add('hl');
   toast('已终止 AI 处置，控制权已交给你');
 }
@@ -701,26 +711,24 @@ async function abortDisposal(){
     el.classList.remove('running'); el.innerHTML='🛑 处置已终止';
   });
   alarm.status='处置中断'; alarm.way='AI 智能处置（人工终止）'; renderAlarm();
-  setSub('已人工终止');
-  addBot('🛑 已终止 AI 处置，<b>已拍素材保留</b>。');
-  $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
+  setSub('终止处置');
+  addBot('🛑 已终止 AI 处置。');
+  $('#pCtrl').textContent='航线自动'; $('#bottom').classList.remove('locked');
   toast('已终止 AI 处置，正在恢复航线');
 
   const box=document.createElement('div'); box.className='closing stop';
-  box.innerHTML='🔄 正在自动恢复航线…';
+  box.innerHTML='🔄 正在恢复航线....';
   msgs.appendChild(box); scroll();
   setState('🔄 正在恢复航线','ai');
-  await sleep(1400); if(stale(my)) return;
+  await sleep(1600); if(stale(my)) return;
 
   document.body.classList.remove('paused');
   scene.style.transform='none'; illegal.style.transform='none'; illegal.classList.remove('locked');
   cross.classList.remove('on-target'); $('#zoomTag').classList.remove('on'); $('#pZoom').textContent='1.0x'; $('#pAlt').textContent='42.0 m';
-  box.innerHTML='▶ <b>航线已恢复</b>，检测正在重新开启…';
-  setState('▶ 航线已恢复 · 检测重新开启中','run');
   $('#taskState').textContent='● 任务执行中'; $('#progFill').style.height='52%'; $('#pWp').textContent='航点 4/8';
-  await sleep(1800); if(stale(my)) return;
+  await sleep(1400); if(stale(my)) return;
 
-  box.innerHTML='▶ <b>航线已恢复</b>，检测已重新开启，任务继续飞行。已拍素材保留，您可关闭对话框。';
+  box.innerHTML='▶ <b>航线已恢复</b>，检测已重新开启，任务继续飞行。您可关闭对话框。';
   setState('任务执行中 · 航点 4/8','run'); scroll();
 }
 /* ---------------- AI 智能处置主流程 ---------------- */
@@ -728,7 +736,7 @@ async function aiDispose(my){
   const degrade = scenario==='degrade';
   alarm.status='处置中'; alarm.way='AI 智能处置'; renderAlarm();
   openPanel(); setSub('处置中');showStop(true);
-  $('#pCtrl').textContent='智能体'; $('#ptz').classList.add('ai');
+  $('#pCtrl').textContent='智能体'; $('#bottom').classList.add('locked');   // 飞控操作置灰
   setState('🤖 AI 智能处置中 · 追踪取证','ai');
   toast('已进入 AI 智能处置 · 其他页面弹窗已关闭');
 
@@ -736,7 +744,7 @@ async function aiDispose(my){
   let t=typing(); await sleep(700*PACE); t.remove(); if(stale(my)) return;
 
   /* --- 阶段一：分析（只给加载过程，不出结论卡） --- */
-  addPhase('分析过程');
+  addPhase('执行过程信息');
   const an=document.createElement('div'); an.className='analyzing';
   an.innerHTML='<div class="ahd"><span class="spin"></span><span class="atxt">正在读取告警帧…</span></div><div class="abar"><i></i></div>';
   msgs.appendChild(an); scroll();
@@ -751,7 +759,7 @@ async function aiDispose(my){
   await sleep(700*PACE); if(stale(my)) return;
 
   const run=document.createElement('div'); run.className='closing running';
-  run.innerHTML='🎯 正在追踪目标…'; msgs.appendChild(run); scroll();
+  msgs.appendChild(run); setRun(run,'🎯 正在追踪目标…');
 
   await runFx(my, 2000, ()=>{ scene.style.transform='scale(1.45)'; illegal.style.transform='translate(-14px,10px)'; $('#pAlt').textContent='18.0 m'; });
   if(stale(my)) return;
@@ -762,23 +770,23 @@ async function aiDispose(my){
     $('#zoomTag').textContent='🔍 变焦 6.0x'; $('#pZoom').textContent='6.0x';
   });
   if(stale(my)) return;
-  run.innerHTML='📷 在拍照取证…'; scroll();
+  setRun(run,'📷 正在拍照取证…');
 
   if(degrade){
     await runFx(my, 1500, fireShutter);
     if(stale(my)) return;
-    run.innerHTML='🔍 识别车牌中…'; scroll();
+    setRun(run,'🔍 识别车牌中…');
     await runFx(my, 1200, null);
     if(stale(my)) return;
-    run.innerHTML='⚠ 车牌没拍清，正在换个角度补拍…'; scroll();
+    setRun(run,'⚠ 车牌没拍清，正在换个角度补拍…');
     await runFx(my, 1300, ()=>{ illegal.style.transform='translate(6px,6px)'; });
     if(stale(my)) return;
     await runFx(my, 1200, ()=>{ scene.style.transform='scale(3.1)'; $('#zoomTag').textContent='🔍 变焦 8.0x'; $('#pZoom').textContent='8.0x'; });
     if(stale(my)) return;
-    run.innerHTML='📷 在拍照取证…'; scroll();
+    setRun(run,'📷 正在拍照取证…');
     await runFx(my, 1500, fireShutter);
     if(stale(my)) return;
-    run.innerHTML='🔍 识别车牌中…'; scroll();
+    setRun(run,'🔍 识别车牌中…');
     await runFx(my, 1300, null);
     if(stale(my)) return;
     run.remove();
@@ -786,7 +794,7 @@ async function aiDispose(my){
   } else {
     await runFx(my, 1700, fireShutter);
     if(stale(my)) return;
-    run.innerHTML='🔍 识别车牌中…'; scroll();
+    setRun(run,'🔍 识别车牌中…');
     await runFx(my, 1600, null);
     if(stale(my)) return;
     run.remove();
@@ -822,7 +830,7 @@ async function degradeClose(my){
   c.innerHTML = `
     <div class="ch">取证完成</div>
     ${evidenceHTML(true)}
-    <div class="plateline"><span class="pv" style="color:#ffd591;font-size:14px;">未取到达标车牌</span></div>`;
+    <div class="plateline"><span class="pv" style="color:#ffd591;font-size:14px;">未取到清晰车牌</span></div>`;
   msgs.appendChild(c); scroll();
   c.querySelector('.evidence').onclick=()=>lightbox('blur');
   await sleep(700); if(stale(my)) return;
@@ -831,13 +839,13 @@ async function degradeClose(my){
 async function closeAndResume(my){
 
   const box=document.createElement('div'); box.className='closing';
-  box.innerHTML='🔄 正在自动恢复航线…';
+  box.innerHTML='🔄 正在恢复航线....';
   msgs.appendChild(box); scroll();
   setState('🔄 正在恢复航线','ai');
   await sleep(1400); if(stale(my)) return;
 
   document.body.classList.remove('paused');
-  $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
+  $('#pCtrl').textContent='航线自动'; $('#bottom').classList.remove('locked');
   scene.style.transform='none'; illegal.style.transform='none'; illegal.classList.remove('locked');
   cross.classList.remove('on-target'); $('#zoomTag').classList.remove('on'); $('#pZoom').textContent='1.0x'; $('#pAlt').textContent='42.0 m';
   box.innerHTML='▶ <b>航线已恢复</b>，检测正在重新开启…';

@@ -732,7 +732,7 @@ async function aiDispose(my){
   setState('🤖 AI 智能处置中 · 追踪取证','ai');
   toast('已进入 AI 智能处置 · 其他页面弹窗已关闭');
 
-  addBot('🔒 <b>已接管这条告警</b>，处置期间其他人无法再接管。开始分析…');
+  addBot('🔒 <b>已接管这条告警</b>，智能处置中…');
   let t=typing(); await sleep(700*PACE); t.remove(); if(stale(my)) return;
 
   /* --- 阶段一：分析（只给加载过程，不出结论卡） --- */

@@ -233,6 +233,17 @@
   .phase{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--sub); letter-spacing:.6px; margin-top:4px; }
   .phase:before,.phase:after{ content:''; flex:1; height:1px; background:var(--line); }
 
+  /* 分析中：加载动效（不出结论卡） */
+  .analyzing{ align-self:stretch; background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:11px 12px 12px; }
+  .analyzing .ahd{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:#cfd8e3; }
+  .analyzing .spin{ width:13px; height:13px; border-radius:50%; flex-shrink:0;
+    border:2px solid rgba(91,155,255,.25); border-top-color:var(--accent2); animation:spin .8s linear infinite; }
+  .analyzing .abar{ margin-top:10px; height:3px; border-radius:3px; background:rgba(120,150,190,.16); overflow:hidden; }
+  .analyzing .abar i{ display:block; width:38%; height:100%; border-radius:3px;
+    background:linear-gradient(90deg,transparent,var(--accent2),transparent); animation:aslide 1.25s ease-in-out infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @keyframes aslide{ from{ transform:translateX(-100%); } to{ transform:translateX(300%); } }
+
   /* 卡片通用 */
   .card{ align-self:stretch; background:var(--panel2); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
   .card .ch{ padding:9px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; }
@@ -603,7 +614,7 @@ function resetAll(){
   cross.classList.remove('on-target'); $('#zoomTag').classList.remove('on');
   $('#pZoom').textContent='1.0x'; $('#pCtrl').textContent='航线自动'; $('#ptz').classList.remove('ai');
   $('#btnManualResume').disabled=true; $('#progFill').style.height='38%';
-  msgs.querySelectorAll('.phase,.bubble,.card,.typing,.closing').forEach(e=>e.remove());
+  msgs.querySelectorAll('.phase,.bubble,.card,.typing,.closing,.analyzing').forEach(e=>e.remove());
   setState('任务执行中 · 航点 3/8','run'); setSub('待触发');
   $('#taskState').textContent='● 任务执行中';
 }
@@ -722,15 +733,18 @@ async function aiDispose(my){
   toast('已进入 AI 智能处置 · 其他页面弹窗已关闭');
 
   addBot('🔒 <b>已接管这条告警</b>，处置期间其他人无法再接管。开始分析…');
-  let t=typing(); await sleep(1100*PACE); t.remove(); if(stale(my)) return;
+  let t=typing(); await sleep(700*PACE); t.remove(); if(stale(my)) return;
 
-  /* --- 阶段一：分析 --- */
+  /* --- 阶段一：分析（只给加载过程，不出结论卡） --- */
   addPhase('分析过程');
-  const c1=card({
-    title:'目标确认', tag:'车辆违停', tagCls:'ok',
-    body:`已在告警帧中锁定目标：<b>1 辆白灰色轿车</b>，停于上行<b>应急车道</b>，车尾朝向与航线方向一致。`
-  });
-  await sleep(1400*PACE); if(stale(my)) return;
+  const an=document.createElement('div'); an.className='analyzing';
+  an.innerHTML='<div class="ahd"><span class="spin"></span><span class="atxt">正在读取告警帧…</span></div><div class="abar"><i></i></div>';
+  msgs.appendChild(an); scroll();
+  for(const s of ['正在读取告警帧…','正在锁定违停车辆…','正在判断取证方式…']){
+    an.querySelector('.atxt').textContent=s;
+    await sleep(900*PACE); if(stale(my)){ an.remove(); return; }
+  }
+  an.remove();
 
   /* --- 阶段二：执行（不逐条展示动作，只报当前在做什么） --- */
   addBot('我将<b>根据画面理解智能处置</b>。<br>若您想人工接管可点击【<b>结束处置并人工接管</b>】，若您想结束处置可点击【<b>结束处置并恢复航线</b>】。');
@@ -780,12 +794,7 @@ async function aiDispose(my){
 }  }
 
 
-function card({title, tag, tagCls, body}){
-  const c=document.createElement('div'); c.className='card';
-  let html=`<div class="ch">${title}${tag?`<span class="tag ${tagCls||''}">${tag}</span>`:''}</div>`;
-  if(body) html+=`<div class="cb">${body}</div>`;
-  c.innerHTML=html; msgs.appendChild(c); scroll(); return c;
-}async function runFx(my, ms, fx){
+async function runFx(my, ms, fx){
   if(fx) await fx();
   await sleep(ms*PACE);
 }async function fireShutter(){ const f=$('#flash'); f.classList.remove('fire'); void f.offsetWidth; f.classList.add('fire'); }

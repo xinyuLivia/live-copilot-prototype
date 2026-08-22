@@ -48,6 +48,7 @@ function scroll(){ msgs.scrollTop=msgs.scrollHeight; }
 function addUser(t){ const b=document.createElement('div'); b.className='bubble user'; b.textContent=t; msgs.appendChild(b); scroll(); }
 function addBot(html){ const b=document.createElement('div'); b.className='bubble bot'; b.innerHTML=html; msgs.appendChild(b); scroll(); }
 function typing(){ const t=document.createElement('div'); t.className='typing'; t.innerHTML='<i></i><i></i><i></i>'; msgs.appendChild(t); scroll(); return t; }
+function listeningBubble(){ const b=document.createElement('div'); b.className='listenrow'; b.innerHTML='<span class="lmic">🎤</span><span class="wave"><i></i><i></i><i></i><i></i></span><span class="ltxt">聆听中…请说出指令</span>'; msgs.appendChild(b); scroll(); return b; }
 function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1800); }
 function flash(t){ actflash.textContent=t; actflash.classList.add('on'); setTimeout(()=>actflash.classList.remove('on'),1000); }
 function nowTime(){ const d=new Date(); return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':'); }
@@ -332,12 +333,13 @@ $('#micBtn').onclick=()=>{
   if(listening) return;
   listening=true; mic.classList.add('listening');
   if(!panel.classList.contains('open')) openPanel();
-  toast('🎤 聆听中… 请说出指令');
+  const lb=listeningBubble();
   setTimeout(()=>{
+    lb.remove();
     const q=voiceSamples[Math.floor(Math.random()*voiceSamples.length)];
-    input.value=q; toast('🎤 已识别：'+q);
+    input.value=q;
     mic.classList.remove('listening'); listening=false;
-    setTimeout(send, 500);
+    setTimeout(send, 300);
   }, 1500);
 };
 

@@ -185,6 +185,12 @@
   .typing i{ width:6px;height:6px;border-radius:50%;background:var(--sub); animation:tp 1.2s infinite; }
   .typing i:nth-child(2){ animation-delay:.2s; } .typing i:nth-child(3){ animation-delay:.4s; }
   @keyframes tp{ 0%,60%,100%{transform:translateY(0);opacity:.4;} 30%{transform:translateY(-4px);opacity:1;} }
+  .listenrow{ align-self:flex-start; display:flex; align-items:center; gap:9px; background:var(--panel2); border:1px solid rgba(239,68,68,.45); padding:9px 13px; border-radius:12px; border-bottom-left-radius:3px; font-size:12.5px; color:#ffb3b3; }
+  .listenrow .lmic{ font-size:15px; }
+  .listenrow .wave{ display:flex; align-items:center; gap:2px; height:16px; }
+  .listenrow .wave i{ width:3px; height:6px; background:#ff8a8a; border-radius:2px; animation:wv .9s infinite ease-in-out; }
+  .listenrow .wave i:nth-child(2){ animation-delay:.15s; } .listenrow .wave i:nth-child(3){ animation-delay:.3s; } .listenrow .wave i:nth-child(4){ animation-delay:.45s; }
+  @keyframes wv{ 0%,100%{ height:5px; } 50%{ height:16px; } }
 
   /* 指令执行卡（无确认，直接执行；可中止） */
   .cmd{ align-self:flex-start; width:92%; background:var(--panel2); border:1px solid var(--line); border-radius:12px; overflow:hidden; }

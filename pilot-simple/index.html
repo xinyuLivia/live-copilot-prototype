@@ -139,6 +139,8 @@
     background:rgba(15,19,26,.97); border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:.25s; }
   .manual.open{ opacity:1; transform:translate(-50%,0); pointer-events:auto; }
   body.drawer-open .manual{ left:calc(50% - 195px); }
+  .video-area, .bottom{ transition:right .28s ease; }
+  body.drawer-open .video-area, body.drawer-open .bottom{ right:390px; }
   .manual .mh{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line); font-size:13px; font-weight:600; }
   .manual .mh .msrc{ font-size:11px; font-weight:400; color:var(--warn); }
   .manual .mh .mx{ margin-left:auto; cursor:pointer; color:var(--sub); font-size:18px; }

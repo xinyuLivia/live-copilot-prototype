@@ -37,9 +37,10 @@
   .dispfoot .dfbtns button:hover{ border-color:var(--accent); color:#fff; }
   .dispfoot .dfhint{ font-size:11px; color:var(--sub); margin-top:7px; line-height:1.5; }
   /* 待处置弹窗 */
-  .alarmmodal{ position:absolute; inset:0; z-index:60; background:rgba(4,7,12,.55); display:none; align-items:center; justify-content:center; }
-  .alarmmodal.open{ display:flex; }
-  .ambox{ width:380px; background:#141a24; border:1px solid rgba(245,158,11,.5); border-radius:14px; box-shadow:0 18px 50px rgba(0,0,0,.6); overflow:hidden; }
+  .alarmmodal{ position:absolute; top:52px; right:14px; z-index:70; display:none; }
+  .alarmmodal.open{ display:block; }
+  .ambox{ width:340px; background:#141a24; border:1px solid rgba(245,158,11,.5); border-radius:14px; box-shadow:0 16px 44px rgba(0,0,0,.6); overflow:hidden; animation:ampop .26s cubic-bezier(.2,1.2,.4,1); }
+  @keyframes ampop{ from{ transform:translateX(16px); opacity:0; } }
   .amhead{ display:flex; align-items:center; gap:10px; padding:13px 16px; background:rgba(245,158,11,.14); border-bottom:1px solid var(--line); }
   .amhead .amicon{ font-size:18px; color:var(--warn); }
   .amhead .amttl{ font-size:14px; font-weight:700; color:#ffd591; flex:1; }

@@ -324,6 +324,23 @@ function send(){
 $('#sendBtn').onclick=send;
 input.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
 
+/* ============ 语音下发指令（演示：模拟语音识别） ============ */
+const voiceSamples=['上升到 50 米，云台朝下','向前飞 10 米再拉个全景','原地顺时针转一圈，每 90 度停 2 秒','变焦到 5 倍看清远处','云台转到正下方'];
+let listening=false;
+$('#micBtn').onclick=()=>{
+  const mic=$('#micBtn');
+  if(listening) return;
+  listening=true; mic.classList.add('listening');
+  if(!panel.classList.contains('open')) openPanel();
+  toast('🎤 聆听中… 请说出指令');
+  setTimeout(()=>{
+    const q=voiceSamples[Math.floor(Math.random()*voiceSamples.length)];
+    input.value=q; toast('🎤 已识别：'+q);
+    mic.classList.remove('listening'); listening=false;
+    setTimeout(send, 500);
+  }, 1500);
+};
+
 /* ============ 任务计时（贴近真实实况） ============ */
 let elapsed=7*60+3;
 setInterval(()=>{

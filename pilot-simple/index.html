@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>智能操控 · 简版 · AI Pilot</title>
+<title>Live Copilot · 简版</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   :root{
@@ -122,8 +122,8 @@
     background:rgba(47,123,255,.9); color:#fff; font-size:14px; padding:8px 16px; border-radius:10px; box-shadow:0 6px 20px rgba(47,123,255,.5); pointer-events:none; }
   .actflash.on{ opacity:1; transform:translate(-50%,-50%) scale(1); }
 
-  /* 常驻急停 */
-  .estopf{ position:absolute; left:256px; bottom:64px; z-index:34; background:rgba(239,68,68,.16); border:1px solid rgba(239,68,68,.6); color:#ffb3b3; font-size:12.5px; font-weight:600; padding:8px 14px; border-radius:10px; cursor:pointer; }
+  /* 急停（置于底部工具栏，不遮挡画面） */
+  .estopf{ display:flex; align-items:center; gap:6px; background:rgba(239,68,68,.16); border:1px solid rgba(239,68,68,.6); color:#ffb3b3; font-size:13px; font-weight:600; padding:7px 16px; border-radius:8px; cursor:pointer; }
   .estopf:hover{ background:rgba(239,68,68,.28); }
 
   /* 底部工具栏（对齐真实实况：画面布局切换 + 操控入口） */
@@ -209,6 +209,9 @@
   .inputbar input:focus{ border-color:var(--accent); }
   .inputbar .mic,.inputbar .send{ width:38px; height:38px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .inputbar .mic{ background:var(--panel2); border:1px solid var(--line); } .inputbar .send{ background:var(--accent); }
+  .inputbar .mic.listening{ background:rgba(239,68,68,.2); border-color:rgba(239,68,68,.6); animation:micpulse 1s infinite; }
+  .inputbar .mic.listening svg{ stroke:#ffb3b3; }
+  @keyframes micpulse{ 50%{ box-shadow:0 0 0 6px rgba(239,68,68,.12); } }
   .inputbar svg{ width:18px; height:18px; }
   .toast{ position:absolute; bottom:70px; left:50%; transform:translateX(-50%) translateY(20px); background:#1b2330; border:1px solid var(--line); color:#e6ebf2; padding:10px 18px; border-radius:8px; font-size:13px; opacity:0; transition:.3s; z-index:60; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -273,9 +276,6 @@
     <div class="actflash" id="actflash"></div>
   </div>
 
-  <!-- 常驻急停 -->
-  <button class="estopf" id="estopFloat">■ 急停</button>
-
   <!-- 底部工具栏 -->
   <div class="bottom">
     <div class="views">
@@ -285,6 +285,7 @@
       <button class="vw" title="画中画">◱</button>
     </div>
     <button class="ctrlbtn" id="openManual">🕹 操控</button>
+    <button class="estopf" id="estopFloat">■ 急停</button>
   </div>
 
   <!-- 手动操控面板 -->
@@ -309,7 +310,7 @@
   </div>
 
   <!-- 悬浮球 -->
-  <div class="fab" id="fab" title="打开智能操控">
+  <div class="fab" id="fab" title="打开 Live Copilot">
     <span class="ripple"></span>
     <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
   </div>
@@ -318,12 +319,12 @@
   <div class="panel" id="panel">
     <div class="phead">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v1H7a2 2 0 0 0-2 2v3a5 5 0 0 0 5 5h4a5 5 0 0 0 5-5V8a2 2 0 0 0-2-2h-2V5a3 3 0 0 0-3-3z"/><circle cx="9" cy="11" r="1" fill="#fff"/><circle cx="15" cy="11" r="1" fill="#fff"/></svg></div>
-      <div><div class="t">智能操控 · AI Pilot</div><div class="s">说完直接执行 · 可随时接管 / 急停</div></div>
+      <div><div class="t">Live Copilot</div><div class="s">说完直接执行 · 可随时接管 / 急停</div></div>
       <span class="x" id="closeBtn">×</span>
     </div>
     <div class="msgs" id="msgs">
       <div class="greet">
-        你好，我是 <b>智能操控助手</b>。用一句话告诉我怎么飞、镜头怎么看，我来帮你完成。<br>
+        你好，我是 <b>Live Copilot</b>。用一句话（可语音）告诉我怎么飞、镜头怎么看，我来帮你完成。<br>
         比如"上升到 50 米，云台朝下""原地转一圈，每 90 度停 2 秒""向前飞 5 米""变焦到 5 倍"。<br>
         执行过程中随时可以<b>中止</b>或<b>接管</b>。👇
       </div>
@@ -331,7 +332,7 @@
     <div class="chips" id="chips"></div>
     <div class="inputbar">
       <input id="input" placeholder="下达飞行 / 云台指令（可组合）…" autocomplete="off">
-      <button class="mic" title="语音输入"><svg viewBox="0 0 24 24" fill="none" stroke="#9fb0c6" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg></button>
+      <button class="mic" id="micBtn" title="语音下发指令"><svg viewBox="0 0 24 24" fill="none" stroke="#9fb0c6" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg></button>
       <button class="send" id="sendBtn" title="发送"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
     </div>
   </div>

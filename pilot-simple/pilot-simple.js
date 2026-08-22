@@ -17,8 +17,9 @@ function setSource(s){
   const map={auto:['任务自动 · 巡检执行中','src-auto'], ai:['AI 操控','src-ai'], manual:['手动操控','src-manual'], dispose:['AI 处置中 · 操控已锁定','src-dispose'], pause:['航线已暂停 · 待处置事件','src-dispose']};
   const b=$('#srcBadge'); b.textContent='控制源：'+map[s][0]; b.className='srcbadge '+map[s][1];
   $('#resumeBtn').style.display = (s==='auto'||s==='dispose'||s==='pause')?'none':'inline-flex';
+  document.body.classList.toggle('aictrl', s==='ai');   // AI 操控时锁定手动面板
 }
-$('#resumeBtn').onclick=()=>{ if(running) abortAI('交还自动任务'); if(typeof flightAuth!=='undefined'&&flightAuth){ flightAuth.checked=false; updateFlightLock(); } setSource('auto'); toast('已交还自动巡检任务'); };
+$('#resumeBtn').onclick=()=>{ if(running){ running.silent=true; abortAI('交还自动任务'); } if(typeof flightAuth!=='undefined'&&flightAuth){ flightAuth.checked=false; updateFlightLock(); } setSource('auto'); toast('已交还自动巡检任务'); };
 
 /* ---------- 面板开关 ---------- */
 function openPanel(){ panel.classList.add('open'); document.body.classList.add('drawer-open'); fab.classList.add('hidden'); }
@@ -181,7 +182,7 @@ function cmdCardEl(parsed){
   const steps=parsed.steps.map((s,i)=>`<div class="sq"><span class="qi">${i+1}</span><span class="qt">${s.title}<small>${s.param}</small></span></div>`).join('');
   c.innerHTML=`<div class="ch"><div class="cico">${parsed.ico||'🧭'}</div>
      <div><div class="ct">${parsed.label}</div><div class="cs">AI 操控 · 执行中</div></div>
-     <button class="abort">■ 中止</button></div>
+     <button class="abort">■ 终止操控</button></div>
      <div class="seq">${steps}</div>
      <div class="runbar"><i></i></div>`;
   c.querySelector('.abort').onclick=()=>abortAI('用户中止');
@@ -193,7 +194,7 @@ function aiRun(parsed){
   addBot(parsed.compound ? ('好的，分 '+parsed.steps.length+' 步执行（可随时中止/接管）：') : '好的，正在执行：');
   const c=cmdCardEl(parsed); msgs.appendChild(c); scroll();
   const seqEls=c.querySelectorAll('.sq'), fill=c.querySelector('.runbar i');
-  running={card:c, timers:[], aborted:false};
+  running={card:c, timers:[], aborted:false, flight:hasFlight};
   let i=0;
   function nextStep(){
     if(running.aborted) return;
@@ -213,6 +214,7 @@ function aiRun(parsed){
     c.classList.add('done'); c.querySelector('.cs').textContent='AI 操控 · 已完成'; const ab=c.querySelector('.abort'); if(ab) ab.remove();
     addBot('✅ 已完成：<b>'+parsed.label+'</b><span class="tm"> · '+nowTime()+'</span>');
     running=null;
+    if(hasFlight) returnWaylineBubble('操控已完成，无人机悬停中。');
   }
   if(hasFlight){
     setSource('ai');
@@ -227,14 +229,37 @@ function aiRun(parsed){
 }
 function abortAI(reason){
   if(!running) return;
+  const wasFlight=running.flight, silent=running.silent;
   running.aborted=true; running.timers.forEach(clearTimeout);
-  const c=running.card; if(c){ c.classList.add('aborted'); const cs=c.querySelector('.cs'); if(cs) cs.textContent='已中止'; const ab=c.querySelector('.abort'); if(ab) ab.remove(); }
-  addBot('■ 已中止（'+reason+'）。');
+  const c=running.card; if(c){ c.classList.add('aborted'); const cs=c.querySelector('.cs'); if(cs) cs.textContent='已终止操控'; const ab=c.querySelector('.abort'); if(ab) ab.remove(); }
   running=null;
+  if(silent) return;                       // 被处置/交还等外部流程抢占时，不重复提示
+  if(wasFlight){
+    applyAction('hover');
+    addBot('■ 已终止操控（'+reason+'），无人机<b>原地悬停</b>。');
+    returnWaylineBubble();
+  } else {
+    addBot('■ 已终止操控（'+reason+'）。');
+  }
+}
+/* 智能体内提供「返回航线」按钮：点击后恢复航线、解锁 */
+function returnWaylineBubble(prefix){
+  const b=document.createElement('div'); b.className='bubble bot';
+  b.innerHTML=(prefix?prefix+'<br>':'')+'需要继续巡检可返回航线。<br><button class="retway">↩ 返回航线</button>';
+  msgs.appendChild(b); scroll();
+  const btn=b.querySelector('.retway');
+  btn.onclick=()=>{ btn.disabled=true; btn.textContent='✓ 已返回航线'; resumeWayline(); };
+}
+function resumeWayline(){
+  if(running){ running.silent=true; abortAI('返回航线'); }
+  if(typeof flightAuth!=='undefined'&&flightAuth){ flightAuth.checked=false; updateFlightLock(); }
+  setSource('auto');
+  addBot('↩ 已返回航线，任务继续巡航。');
+  toast('已返回航线，任务继续');
 }
 function doEstop(reason){
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
-  if(running) abortAI(reason);
+  if(running){ running.silent=true; abortAI(reason); }
   applyAction('estop'); setSource('manual');
   openPanel(); addBot('■ <b>已急停</b>：立即原地悬停，进行中的指令已终止<span class="tm"> · '+nowTime()+'</span>。');
   toast('已急停');
@@ -248,7 +273,7 @@ $('#estopFloat').onclick=()=>doEstop('急停按钮');
 /* 1) 告警触发：自动暂停航线，弹出待处置弹窗 + 30s 倒计时 */
 function triggerAlarm(){
   if(disposing) return;
-  if(running) abortAI('告警处置抢占');
+  if(running){ running.silent=true; abortAI('告警处置抢占'); }
   setSource('pause');
   toast('检测到车辆违停，已自动暂停航线并悬停');
   const m=$('#alarmModal'); m.classList.add('open');
@@ -275,7 +300,7 @@ function manualDispose(){
 function enterDisposal(){
   if(disposing) return;
   closeAlarm();
-  if(running) abortAI('告警处置抢占');
+  if(running){ running.silent=true; abortAI('告警处置抢占'); }
   disposing=true;
   openPanel();
   document.body.classList.add('oplocked');
@@ -331,7 +356,7 @@ $('#dispTakeover').onclick=()=>{ if(disposing) exitDisposal('manual', disposeCar
 function takeover(){
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
   if(cur==='manual') return;
-  if(running) abortAI('切换手动操控');
+  if(running){ running.silent=true; abortAI('切换手动操控'); }
   setSource('manual'); toast('已切换为手动操控');
 }
 /* 飞行控制权：开启后才能操控飞行盘；云台 / 变焦不受限 */

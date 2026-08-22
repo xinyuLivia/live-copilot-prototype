@@ -131,18 +131,18 @@ function applyScene(){
   vscene.style.transform = `scale(${st.zoom}) translateY(${pan}%)`;
 }
 function setSpd(v){ st.spd=v; }
-function boost(ms){ document.body.classList.add('boost'); setSpd(4.5); setTimeout(()=>{ document.body.classList.remove('boost'); setSpd(0.0); }, ms||1500); }
+function boost(ms){ document.body.classList.add('boost'); setSpd(4.5); setTimeout(()=>{ document.body.classList.remove('boost'); setSpd(0.0); }, ms||1900); }
 function applyAction(kind,n){
   switch(kind){
     case 'forward': flash('▲ 向前 '+n+'m'); boost(); break;
     case 'back':    flash('▼ 向后 '+n+'m'); boost(); break;
-    case 'left':    flash('◀ 左移 '+n+'m'); boost(1100); break;
-    case 'right':   flash('▶ 右移 '+n+'m'); boost(1100); break;
+    case 'left':    flash('◀ 左移 '+n+'m'); boost(1600); break;
+    case 'right':   flash('▶ 右移 '+n+'m'); boost(1600); break;
     case 'up':      st.alt=+(st.alt+n).toFixed(1); flash('⬆ 上升 '+n+'m'); break;
     case 'down':    st.alt=Math.max(0,+(st.alt-n).toFixed(1)); flash('⬇ 下降 '+n+'m'); break;
     case 'alt_to':  st.alt=+(+n).toFixed(1); flash('高度 → '+n+'m'); break;
     case 'takeoff': st.alt=n; flash('⛘ 起飞 '+n+'m'); break;
-    case 'rtl':     flash('⛘ 返航降落'); boost(1400); break;
+    case 'rtl':     flash('⛘ 返航降落'); boost(2000); break;
     case 'hover':   setSpd(0.0); flash('⏸ 悬停'); break;
     case 'yaw_l':   st.heading=((st.heading-n)%360+360)%360; flash('↺ 左转 '+n+'°'); break;
     case 'yaw_r':   st.heading=((st.heading+n)%360)%360; flash('↻ 右转 '+n+'°'); break;
@@ -198,13 +198,13 @@ function aiRun(parsed){
     if(running.aborted) return;
     if(i>=parsed.steps.length){ finish(); return; }
     const s=parsed.steps[i], el=seqEls[i]; el.classList.add('active'); litManual(s);
-    const dur = s.kind==='pause' ? s.n*1000 : 900;
+    const dur = s.kind==='pause' ? s.n*1000 : 1600;
     if(s.kind==='pause') flash('⏳ 停顿 '+s.n+'s');
     const t1=setTimeout(()=>{
       applyAction(s.kind, s.n);
       el.classList.remove('active'); el.classList.add('ok');
       fill.style.width=Math.round((i+1)/parsed.steps.length*100)+'%';
-      i++; const t2=setTimeout(nextStep,180); running.timers.push(t2);
+      i++; const t2=setTimeout(nextStep,500); running.timers.push(t2);
     }, dur);
     running.timers.push(t1);
   }
@@ -285,7 +285,7 @@ function enterDisposal(){
     k++;
     if(k<steps.length){ const rt=$('#dispRt'); if(rt) rt.textContent=steps[k]; }
     else { clearInterval(dispTimer); if(disposing) exitDisposal('done', disposeCard); }
-  }, 1800);
+  }, 2600);
 }
 function exitDisposal(mode, card){
   if(!disposing) return;

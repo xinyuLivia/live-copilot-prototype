@@ -10,6 +10,7 @@ let running=null;        // 正在执行的 AI 操控序列
 let disposing=false;     // 是否处于 AI 智能处置中（处置期间操控被锁定）
 let dispTimer=null, alarmTimer=null, disposeCard=null;
 const PLACEHOLDER='下达飞行 / 云台指令（可组合）…';
+const PLATE='粤B·D7F92';   // 演示：AI 处置取证识别到的车牌
 
 /* ---------- 控制源 ---------- */
 function setSource(s){
@@ -337,13 +338,39 @@ function exitDisposal(mode, card){
     if(ds) ds.innerHTML='已取得设备控制权，<b>由你手动操作</b>；航线保持暂停，处置完成后点【▶ 交还自动任务】恢复航线。';
     addBot('已终止 AI 处置。已取得设备控制权，<b>由你手动操作</b>。处置完成后请恢复航线。');
     toast('已转人工接管');
+  } else if(mode==='done'){
+    setSource('auto');
+    if(dt) dt.innerHTML='✅ 车牌已拍清楚 · 取证完成';
+    if(ds) ds.innerHTML='已锁定违停车辆并拍清车尾，车牌识别成功、取证归档完成；航线已恢复，任务继续飞行。';
+    if(card){
+      const pl=document.createElement('div'); pl.className='plateline';
+      pl.innerHTML='<span class="pv">'+PLATE+'</span><span class="pb">✓ 车牌识别成功</span>';
+      card.appendChild(pl);
+      const ph=document.createElement('div'); ph.className='evphoto';
+      ph.innerHTML='📷 取证照 · 变焦 6.0x<span class="abox"></span>';
+      card.appendChild(ph);
+      scroll();
+    }
+    addDispRecord(true);
+    addBot('✅ 取证完成，车牌 <b>'+PLATE+'</b> 识别成功，已归档；航线已恢复，任务继续飞行。');
+    toast('取证完成 · 车牌 '+PLATE);
   } else {
     setSource('auto');
-    if(dt) dt.innerHTML = (mode==='done') ? '✅ 车牌已拍清楚 · 取证完成' : '✅ 已终止 AI 处置';
-    if(ds) ds.innerHTML = (mode==='done') ? '取证完成，航线已恢复，任务继续飞行。你可关闭对话框。' : '已终止 AI 处置，航线已恢复，任务继续飞行。';
-    addBot((mode==='done'?'✅ 取证完成，':'✅ 已终止 AI 处置，')+'航线已恢复，任务继续飞行。');
-    toast(mode==='done'?'取证完成，航线已恢复':'处置结束，航线已恢复');
+    if(dt) dt.innerHTML='✅ 已终止 AI 处置';
+    if(ds) ds.innerHTML='已终止 AI 处置，航线已恢复，任务继续飞行。';
+    addBot('✅ 已终止 AI 处置，航线已恢复，任务继续飞行。');
+    toast('处置结束，航线已恢复');
   }
+}
+/* 左侧「发现车辆违停」告警图片下方追加处置记录 */
+function addDispRecord(ok){
+  const ev=$('#evCar'); if(!ev) return;
+  ev.querySelectorAll('.disp').forEach(d=>d.remove());
+  const d=document.createElement('div'); d.className='disp';
+  d.innerHTML = ok
+    ? '<div class="dh">✅ AI 处置完成 · 车牌 <b>'+PLATE+'</b></div><div class="dev"><span class="plate">'+PLATE+'</span></div>'
+    : '<div class="dh warn">⚠ AI 处置完成 · 未取到清晰车牌</div>';
+  ev.appendChild(d);
 }
 $('#btnDemoDisp').onclick=triggerAlarm;
 $('#amIgnore').onclick=()=>ignoreAlarm(false);

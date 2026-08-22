@@ -144,6 +144,16 @@
   .manual .mh{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line); font-size:13px; font-weight:600; }
   .manual .mh .msrc{ font-size:11px; font-weight:400; color:var(--warn); }
   .manual .mh .mx{ margin-left:auto; cursor:pointer; color:var(--sub); font-size:18px; }
+  .manual .mauth{ display:flex; align-items:center; gap:9px; padding:9px 16px; border-bottom:1px solid var(--line); }
+  .manual .mauth .authlbl{ font-size:12.5px; color:#cfd8e3; font-weight:600; }
+  .manual .mauth .authhint{ font-size:11px; color:var(--sub); margin-left:auto; }
+  .swt{ position:relative; display:inline-block; width:38px; height:20px; cursor:pointer; }
+  .swt input{ opacity:0; width:0; height:0; }
+  .swt .track{ position:absolute; inset:0; background:#2a323e; border:1px solid var(--line); border-radius:20px; transition:.2s; }
+  .swt .track::before{ content:''; position:absolute; width:14px; height:14px; left:3px; top:2px; background:#9fb0c6; border-radius:50%; transition:.2s; }
+  .swt input:checked + .track{ background:var(--accent); border-color:var(--accent); }
+  .swt input:checked + .track::before{ transform:translateX(18px); background:#fff; }
+  .pad.flightctl.locked{ opacity:.4; pointer-events:none; }
   .manual .mbody{ display:flex; align-items:center; justify-content:center; gap:22px; padding:16px; }
   .pad{ display:grid; grid-template-columns:repeat(3,46px); grid-template-rows:repeat(3,46px); gap:5px; }
   .pad button{ background:var(--panel2); border:1px solid var(--line); border-radius:8px; color:#cfd8e3; font-size:15px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; transition:.12s; }
@@ -299,8 +309,13 @@
   <!-- 手动操控面板 -->
   <div class="manual" id="manual">
     <div class="mh">🕹 手动操控 <span class="msrc" id="mSrc">碰任意控件即接管</span> <span class="mx" id="closeManual">×</span></div>
+    <div class="mauth">
+      <label class="swt"><input type="checkbox" id="flightAuth"><span class="track"></span></label>
+      <span class="authlbl">飞行控制权</span>
+      <span class="authhint" id="authHint">需先开启才能控制飞行；云台 / 变焦不受限</span>
+    </div>
     <div class="mbody">
-      <div class="pad">
+      <div class="pad flightctl">
         <div></div><button data-m="up:2" id="mUp">↑<small>上升</small></button><div></div>
         <button data-m="yaw_l:15" id="mYawL">↺<small>左转</small></button><div class="pc">升降<br>偏航</div><button data-m="yaw_r:15" id="mYawR">↻<small>右转</small></button>
         <div></div><button data-m="down:2" id="mDown">↓<small>下降</small></button><div></div>
@@ -309,7 +324,7 @@
         <div class="sld" id="sldGim"><label>云台俯仰 <b id="mGimVal">0°</b></label><input type="range" id="mGim" min="-90" max="30" value="0"></div>
         <div class="sld" id="sldZoom"><label>变焦 <b id="mZoomVal">1.0x</b></label><input type="range" id="mZoom" min="10" max="160" value="10"></div>
       </div>
-      <div class="pad">
+      <div class="pad flightctl">
         <div></div><button data-m="forward:2" id="mFwd">▲<small>前进</small></button><div></div>
         <button data-m="left:2" id="mLeft">◀<small>左移</small></button><div class="pc">前后<br>左右</div><button data-m="right:2" id="mRight">▶<small>右移</small></button>
         <div></div><button data-m="back:2" id="mBack">▼<small>后退</small></button><div></div>

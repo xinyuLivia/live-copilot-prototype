@@ -18,7 +18,7 @@ function setSource(s){
   const b=$('#srcBadge'); b.textContent='控制源：'+map[s][0]; b.className='srcbadge '+map[s][1];
   $('#resumeBtn').style.display = (s==='auto'||s==='dispose')?'none':'inline-flex';
 }
-$('#resumeBtn').onclick=()=>{ if(running) abortAI('交还自动任务'); setSource('auto'); toast('已交还自动巡检任务'); };
+$('#resumeBtn').onclick=()=>{ if(running) abortAI('交还自动任务'); if(typeof flightAuth!=='undefined'&&flightAuth){ flightAuth.checked=false; updateFlightLock(); } setSource('auto'); toast('已交还自动巡检任务'); };
 
 /* ---------- 面板开关 ---------- */
 function openPanel(){ panel.classList.add('open'); document.body.classList.add('drawer-open'); fab.classList.add('hidden'); }
@@ -296,8 +296,19 @@ function takeover(){
   if(running) abortAI('切换手动操控');
   setSource('manual'); toast('已切换为手动操控');
 }
+/* 飞行控制权：开启后才能操控飞行盘；云台 / 变焦不受限 */
+const flightAuth=$('#flightAuth');
+function updateFlightLock(){ document.querySelectorAll('.pad.flightctl').forEach(p=>p.classList.toggle('locked', !flightAuth.checked)); }
+flightAuth.addEventListener('change',()=>{
+  updateFlightLock();
+  if(flightAuth.checked){ takeover(); toast('已开启飞行控制权（进入手动飞行模式）'); }
+  else toast('已关闭飞行控制权');
+});
+updateFlightLock();
+
 document.querySelectorAll('[data-m]').forEach(btn=>{
   btn.addEventListener('mousedown',()=>{
+    if(!flightAuth.checked){ toast('请先开启【飞行控制权】'); return; }
     takeover();
     const [k,n]=btn.dataset.m.split(':');
     applyAction(k, n?+n:undefined);

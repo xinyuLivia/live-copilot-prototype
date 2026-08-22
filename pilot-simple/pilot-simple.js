@@ -187,8 +187,9 @@ function cmdCardEl(parsed){
   c.querySelector('.abort').onclick=()=>abortAI('用户中止');
   return c;
 }
+const FLIGHT_KINDS=new Set(['forward','back','left','right','up','down','alt_to','takeoff','rtl','hover','yaw_l','yaw_r','estop']);
 function aiRun(parsed){
-  setSource('ai'); manual.classList.contains('open') || null;
+  const hasFlight=parsed.steps.some(s=>FLIGHT_KINDS.has(s.kind));
   addBot(parsed.compound ? ('好的，分 '+parsed.steps.length+' 步执行（可随时中止/接管）：') : '好的，正在执行：');
   const c=cmdCardEl(parsed); msgs.appendChild(c); scroll();
   const seqEls=c.querySelectorAll('.sq'), fill=c.querySelector('.runbar i');
@@ -213,7 +214,16 @@ function aiRun(parsed){
     addBot('✅ 已完成：<b>'+parsed.label+'</b><span class="tm"> · '+nowTime()+'</span>');
     running=null;
   }
-  nextStep();
+  if(hasFlight){
+    setSource('ai');
+    applyAction('hover'); flash('⏸ 暂停航线并悬停');
+    addBot('⏸ 已暂停航线并悬停，进入实时飞控（AI 操控）…');
+    const t0=setTimeout(()=>{ if(!running.aborted) nextStep(); }, 1400);
+    running.timers.push(t0);
+  } else {
+    addBot('航线继续巡航，叠加执行云台 / 相机指令，无需暂停航线。');
+    nextStep();
+  }
 }
 function abortAI(reason){
   if(!running) return;

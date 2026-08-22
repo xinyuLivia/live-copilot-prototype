@@ -25,11 +25,35 @@
   .srcbadge.src-dispose{ background:rgba(109,91,255,.18); color:#c9c2ff; }
   .topbar .demo{ color:#c98a3a; font-size:11.5px; cursor:pointer; border:1px solid rgba(245,158,11,.4); border-radius:10px; padding:2px 9px; }
   .topbar .demo:hover{ color:#ffd591; border-color:var(--warn); }
-  /* 处置期间：操控入口全部锁定 */
-  body.oplocked .chips, body.oplocked #openManual, body.oplocked .estopf{ opacity:.4; pointer-events:none; }
-  body.oplocked .inputbar{ opacity:.55; }
-  body.oplocked .inputbar input, body.oplocked .inputbar .send, body.oplocked .inputbar .mic{ pointer-events:none; }
+  /* 处置期间：操控入口锁定；语音 / 文本 / 快捷输入整块隐藏 */
+  body.oplocked #openManual, body.oplocked .estopf{ opacity:.4; pointer-events:none; }
   body.oplocked .bottom .ctrlbtn{ opacity:.4; pointer-events:none; }
+  body.disposing .chips, body.disposing .inputbar{ display:none; }
+  /* 处置底部常驻两按钮（替代输入区） */
+  .dispfoot{ display:none; padding:12px 14px; border-top:1px solid var(--line); }
+  body.disposing .dispfoot{ display:block; }
+  .dispfoot .dfbtns{ display:flex; gap:8px; }
+  .dispfoot .dfbtns button{ flex:1; font-size:12px; padding:9px; border-radius:8px; cursor:pointer; border:1px solid var(--line); background:#0e141c; color:#cfd8e3; }
+  .dispfoot .dfbtns button:hover{ border-color:var(--accent); color:#fff; }
+  .dispfoot .dfhint{ font-size:11px; color:var(--sub); margin-top:7px; line-height:1.5; }
+  /* 待处置弹窗 */
+  .alarmmodal{ position:absolute; inset:0; z-index:60; background:rgba(4,7,12,.55); display:none; align-items:center; justify-content:center; }
+  .alarmmodal.open{ display:flex; }
+  .ambox{ width:380px; background:#141a24; border:1px solid rgba(245,158,11,.5); border-radius:14px; box-shadow:0 18px 50px rgba(0,0,0,.6); overflow:hidden; }
+  .amhead{ display:flex; align-items:center; gap:10px; padding:13px 16px; background:rgba(245,158,11,.14); border-bottom:1px solid var(--line); }
+  .amhead .amicon{ font-size:18px; color:var(--warn); }
+  .amhead .amttl{ font-size:14px; font-weight:700; color:#ffd591; flex:1; }
+  .amring{ width:34px; height:34px; border-radius:50%; border:3px solid rgba(245,158,11,.5); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#ffd591; }
+  .ambody{ padding:14px 16px; }
+  .amrow{ display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0; color:var(--sub); }
+  .amrow b{ color:#e6edf5; }
+  .amdesc{ font-size:12px; color:var(--sub); margin:8px 0; line-height:1.6; } .amdesc b{ color:#ffd591; }
+  .amthumb{ height:70px; border-radius:8px; background:repeating-linear-gradient(45deg,#1b2430,#1b2430 8px,#202a38 8px,#202a38 16px); display:flex; align-items:center; justify-content:center; color:#6b7a8d; font-size:12px; }
+  .amacts{ display:flex; gap:8px; padding:12px 16px 16px; }
+  .amacts button{ flex:1; font-size:12.5px; padding:9px 6px; border-radius:8px; cursor:pointer; border:1px solid var(--line); background:#0e141c; color:#cfd8e3; }
+  .amacts .am-ignore:hover{ border-color:#6b7a8d; }
+  .amacts .am-manual{ border-color:rgba(47,123,255,.5); color:#bcd4ff; }
+  .amacts .am-ai{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
   /* 处置横幅卡（共用对话框内的处置态） */
   .dispcard{ align-self:stretch; background:rgba(109,91,255,.1); border:1px solid rgba(109,91,255,.4); border-radius:12px; padding:11px 12px; }
   .dispcard .dt{ font-size:13px; font-weight:600; color:#c9c2ff; display:flex; align-items:center; gap:7px; line-height:1.5; }
@@ -243,7 +267,7 @@
   <span class="spacer"></span>
   <span class="srcbadge src-auto" id="srcBadge">控制源：任务自动 · 巡检执行中</span>
   <button id="resumeBtn">▶ 交还自动任务</button>
-  <span class="demo" id="btnDemoDisp" title="模拟一次告警→AI 智能处置，演示处置期间操控被锁定">⚠ 模拟告警处置</span>
+  <span class="demo" id="btnDemoDisp" title="模拟告警 → 自动暂停航线 → 待处置弹窗（暂不处理 / 人工接管 / AI 智能处置）">⚠ 模拟告警</span>
   <span class="dot">✿</span>
 </div>
 
@@ -356,6 +380,35 @@
       <input id="input" placeholder="下达飞行 / 云台指令（可组合）…" autocomplete="off">
       <button class="mic" id="micBtn" title="语音下发指令"><svg viewBox="0 0 24 24" fill="none" stroke="#9fb0c6" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg></button>
       <button class="send" id="sendBtn" title="发送"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+    </div>
+    <div class="dispfoot" id="dispFoot">
+      <div class="dfbtns">
+        <button id="dispResume">结束处置并恢复航线</button>
+        <button id="dispTakeover">结束处置并人工接管</button>
+      </div>
+      <div class="dfhint">恢复航线：停止处置，返回原航线 · 人工接管：停止处置，控制权交给你手动操作</div>
+    </div>
+  </div>
+
+  <!-- 待处置弹窗（告警 → 自动暂停航线 → 用户选择处置方式） -->
+  <div class="alarmmodal" id="alarmModal">
+    <div class="ambox">
+      <div class="amhead">
+        <span class="amicon">⚠</span>
+        <div class="amttl">紧急预警 · 待处置</div>
+        <div class="amring" id="amRing">30</div>
+      </div>
+      <div class="ambody">
+        <div class="amrow"><span>事件类型</span><b>车辆违停</b></div>
+        <div class="amrow"><span>位置桩号</span><b>K12+300 ~ K12+450</b></div>
+        <div class="amdesc">检测到高速主路违停车辆，已<b>自动暂停航线</b>并悬停，请选择处置方式。</div>
+        <div class="amthumb">📷 告警抓拍</div>
+      </div>
+      <div class="amacts">
+        <button class="am-ignore" id="amIgnore">暂不处理</button>
+        <button class="am-manual" id="amManual">人工接管处置</button>
+        <button class="am-ai" id="amAI">AI 智能处置</button>
+      </div>
     </div>
   </div>
 

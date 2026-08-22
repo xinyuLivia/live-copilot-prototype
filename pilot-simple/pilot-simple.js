@@ -8,15 +8,15 @@ const st = { alt:30.0, zoom:1.0, gimbal:0, heading:0, spd:0.0 };
 let cur='auto';          // 控制源：auto / ai / manual / dispose
 let running=null;        // 正在执行的 AI 操控序列
 let disposing=false;     // 是否处于 AI 智能处置中（处置期间操控被锁定）
-let dispTimer=null;
+let dispTimer=null, alarmTimer=null, disposeCard=null;
 const PLACEHOLDER='下达飞行 / 云台指令（可组合）…';
 
 /* ---------- 控制源 ---------- */
 function setSource(s){
   cur=s;
-  const map={auto:['任务自动 · 巡检执行中','src-auto'], ai:['AI 操控','src-ai'], manual:['手动操控','src-manual'], dispose:['AI 处置中 · 操控已锁定','src-dispose']};
+  const map={auto:['任务自动 · 巡检执行中','src-auto'], ai:['AI 操控','src-ai'], manual:['手动操控','src-manual'], dispose:['AI 处置中 · 操控已锁定','src-dispose'], pause:['航线已暂停 · 待处置事件','src-dispose']};
   const b=$('#srcBadge'); b.textContent='控制源：'+map[s][0]; b.className='srcbadge '+map[s][1];
-  $('#resumeBtn').style.display = (s==='auto'||s==='dispose')?'none':'inline-flex';
+  $('#resumeBtn').style.display = (s==='auto'||s==='dispose'||s==='pause')?'none':'inline-flex';
 }
 $('#resumeBtn').onclick=()=>{ if(running) abortAI('交还自动任务'); if(typeof flightAuth!=='undefined'&&flightAuth){ flightAuth.checked=false; updateFlightLock(); } setSource('auto'); toast('已交还自动巡检任务'); };
 
@@ -231,63 +231,91 @@ function doEstop(reason){
 }
 $('#estopFloat').onclick=()=>doEstop('急停按钮');
 
-/* ============ 与「智能处置」互斥：处置期间锁定操控 ============ */
-/* 共用同一对话框：告警触发 AI 处置 → 操控入口全部锁定；处置收口后恢复操控 */
+/* ============ 与「智能处置」融合（沿用智能处置核心交互） ============ */
+/* 告警 → 自动暂停航线 → 待处置弹窗（暂不处理 / 人工接管处置 / AI 智能处置）
+   仅选择 AI 智能处置才在实况智能体内出现处置内容；处置期间操控输入区隐藏、底部常驻两按钮 */
+
+/* 1) 告警触发：自动暂停航线，弹出待处置弹窗 + 30s 倒计时 */
+function triggerAlarm(){
+  if(disposing) return;
+  if(running) abortAI('告警处置抢占');
+  setSource('pause');
+  toast('检测到车辆违停，已自动暂停航线并悬停');
+  const m=$('#alarmModal'); m.classList.add('open');
+  let left=30; const ring=$('#amRing'); ring.textContent=left;
+  clearInterval(alarmTimer);
+  alarmTimer=setInterval(()=>{ left--; ring.textContent=left; if(left<=0) ignoreAlarm(true); }, 1000);
+}
+function closeAlarm(){ clearInterval(alarmTimer); $('#alarmModal').classList.remove('open'); }
+
+/* 2a) 暂不处理 / 超时失效 → 恢复航线，实况智能体无任何处置内容 */
+function ignoreAlarm(expired){
+  closeAlarm(); setSource('auto');
+  toast(expired?'30 秒未选择，已按不处置恢复航线':'已选择暂不处理，航线已恢复');
+}
+/* 2b) 人工接管处置 → 打开手动面板 + 飞行控制权，航线保持暂停，不出现 AI 处置内容 */
+function manualDispose(){
+  closeAlarm(); setSource('manual');
+  manual.classList.add('open'); $('#openManual').classList.add('on');
+  flightAuth.checked=true; updateFlightLock();
+  toast('已人工接管处置，航线保持暂停，已开启飞行控制权；完成后点「交还自动任务」恢复航线');
+}
+
+/* 2c) AI 智能处置 → 实况智能体进入处置模式：输入区隐藏、底部两按钮常驻 */
 function enterDisposal(){
   if(disposing) return;
+  closeAlarm();
   if(running) abortAI('告警处置抢占');
   disposing=true;
   openPanel();
   document.body.classList.add('oplocked');
+  document.body.classList.add('disposing');
   manual.classList.remove('open'); $('#openManual').classList.remove('on');
   setSource('dispose');
-  input.placeholder='处置进行中，操控暂不可用…';
-  const c=document.createElement('div'); c.className='dispcard';
+  const c=document.createElement('div'); c.className='dispcard'; disposeCard=c;
   c.innerHTML=`
-    <div class="dt">🔒 检测到车辆违停 · AI 智能处置中</div>
-    <div class="ds">处置期间<b>操控暂不可用</b>。智能体正在按画面理解<b>追踪目标 → 拍照取证 → 识别车牌</b>，拍清楚会自动收尾并恢复航线。</div>
-    <div class="rt" id="dispRt">🎯 正在追踪目标…</div>
-    <div class="da">
-      <button id="dispResume">结束处置并恢复航线</button>
-      <button id="dispTakeover">结束处置并人工接管</button>
-    </div>`;
+    <div class="dt">🤖 处置智能体 · 已接管这条告警</div>
+    <div class="ds">遇到车辆违停，我会自己看画面决定怎么拍——<b>追踪目标 → 拍照取证 → 识别车牌</b>，拍清楚就自动收尾并恢复航线。<br>全程不用你操作；想自己飞或想停下，用下方按钮。</div>
+    <div class="rt" id="dispRt">🎯 正在追踪目标…</div>`;
   msgs.appendChild(c); scroll();
-  c.querySelector('#dispResume').onclick=()=>exitDisposal('resume', c);
-  c.querySelector('#dispTakeover').onclick=()=>exitDisposal('manual', c);
-  toast('已进入 AI 智能处置，操控已锁定');
+  toast('已进入 AI 智能处置');
   const steps=['🎯 正在追踪目标…','📷 正在拍照取证…','🔍 识别车牌中…'];
   let k=0; clearInterval(dispTimer);
   dispTimer=setInterval(()=>{
     k++;
     if(k<steps.length){ const rt=$('#dispRt'); if(rt) rt.textContent=steps[k]; }
-    else { clearInterval(dispTimer); if(disposing) exitDisposal('done', c); }
+    else { clearInterval(dispTimer); if(disposing) exitDisposal('done', disposeCard); }
   }, 1800);
 }
 function exitDisposal(mode, card){
   if(!disposing) return;
   disposing=false; clearInterval(dispTimer);
   document.body.classList.remove('oplocked');
-  input.placeholder=PLACEHOLDER;
-  const da=card.querySelector('.da'); if(da) da.remove();
-  const dt=card.querySelector('.dt'), ds=card.querySelector('.ds'), rt=card.querySelector('#dispRt');
+  document.body.classList.remove('disposing');
+  const dt=card&&card.querySelector('.dt'), ds=card&&card.querySelector('.ds'), rt=card&&card.querySelector('#dispRt');
+  if(rt) rt.remove();
   if(mode==='manual'){
     setSource('manual');
     manual.classList.add('open'); $('#openManual').classList.add('on');
-    if(dt) dt.innerHTML='✅ 已结束处置 · 转人工接管';
-    if(ds) ds.innerHTML='已取得设备控制权，<b>操控已恢复</b>；可用「操控」面板或直接下达指令。';
-    if(rt) rt.remove();
-    addBot('✅ 已结束处置，取得控制权，<b>操控已恢复</b>。');
-    toast('已转人工接管，操控已恢复');
+    flightAuth.checked=true; updateFlightLock();
+    if(dt) dt.innerHTML='✅ 已终止 AI 处置 · 转人工接管';
+    if(ds) ds.innerHTML='已取得设备控制权，<b>由你手动操作</b>；航线保持暂停，处置完成后点【▶ 交还自动任务】恢复航线。';
+    addBot('已终止 AI 处置。已取得设备控制权，<b>由你手动操作</b>。处置完成后请恢复航线。');
+    toast('已转人工接管');
   } else {
     setSource('auto');
-    if(dt) dt.innerHTML = (mode==='done') ? '✅ 车牌已拍清楚 · 取证完成' : '✅ 已结束处置';
-    if(ds) ds.innerHTML='航线已恢复，任务继续飞行，<b>操控已恢复</b>。可继续下达飞行 / 云台指令。';
-    if(rt) rt.remove();
-    addBot((mode==='done'?'✅ 取证完成，':'✅ 已结束处置，')+'航线已恢复，<b>操控已恢复</b>。');
-    toast('处置结束，操控已恢复');
+    if(dt) dt.innerHTML = (mode==='done') ? '✅ 车牌已拍清楚 · 取证完成' : '✅ 已终止 AI 处置';
+    if(ds) ds.innerHTML = (mode==='done') ? '取证完成，航线已恢复，任务继续飞行。你可关闭对话框。' : '已终止 AI 处置，航线已恢复，任务继续飞行。';
+    addBot((mode==='done'?'✅ 取证完成，':'✅ 已终止 AI 处置，')+'航线已恢复，任务继续飞行。');
+    toast(mode==='done'?'取证完成，航线已恢复':'处置结束，航线已恢复');
   }
 }
-$('#btnDemoDisp').onclick=enterDisposal;
+$('#btnDemoDisp').onclick=triggerAlarm;
+$('#amIgnore').onclick=()=>ignoreAlarm(false);
+$('#amManual').onclick=manualDispose;
+$('#amAI').onclick=enterDisposal;
+$('#dispResume').onclick=()=>{ if(disposing) exitDisposal('resume', disposeCard); };
+$('#dispTakeover').onclick=()=>{ if(disposing) exitDisposal('manual', disposeCard); };
 
 /* ============ 手动接管 ============ */
 function takeover(){

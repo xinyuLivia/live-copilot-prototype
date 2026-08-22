@@ -389,7 +389,6 @@ setInterval(()=>{
   const hh=String(Math.floor(elapsed/3600)).padStart(2,'0'), mm=String(Math.floor(elapsed%3600/60)).padStart(2,'0'), ss=String(elapsed%60).padStart(2,'0');
   const t=`${hh}:${mm}:${ss}`;
   $('#taskRt').textContent=t; $('#evRt').textContent='任务执行中 '+t;
-  const rec=document.querySelector('.rec'); if(rec) rec.childNodes[rec.childNodes.length-1].textContent=' REC '+t;
 },1000);
 
 renderChips(); refreshHud();

@@ -264,7 +264,7 @@ function doEstop(reason){
   openPanel(); addBot('■ <b>已急停</b>：立即原地悬停，进行中的指令已终止<span class="tm"> · '+nowTime()+'</span>。');
   toast('已急停');
 }
-$('#estopFloat').onclick=()=>doEstop('急停按钮');
+{ const eb=$('#estopFloat'); if(eb) eb.onclick=()=>doEstop('急停按钮'); }
 
 /* ============ 与「智能处置」融合（沿用智能处置核心交互） ============ */
 /* 告警 → 自动暂停航线 → 待处置弹窗（暂不处理 / 人工接管处置 / AI 智能处置）

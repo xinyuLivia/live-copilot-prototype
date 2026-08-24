@@ -175,7 +175,7 @@ function cmdCardEl(parsed){
   const steps=parsed.steps.map((s,i)=>`<div class="sq"><span class="qi">${i+1}</span><span class="qt">${s.title}<small>${s.param}</small></span></div>`).join('');
   c.innerHTML=`<div class="ch"><div class="cico">${parsed.ico||'🧭'}</div>
      <div><div class="ct">${parsed.label}</div><div class="cs">AI 操控 · 执行中</div></div>
-     <button class="abort">■ 终止操控</button></div>
+     <button class="abort">■ 终止</button></div>
      <div class="seq">${steps}</div>
      <div class="runbar"><i></i></div>`;
   c.querySelector('.abort').onclick=()=>abortAI('用户中止');
@@ -184,7 +184,7 @@ function cmdCardEl(parsed){
 const FLIGHT_KINDS=new Set(['forward','back','left','right','up','down','alt_to','takeoff','rtl','hover','yaw_l','yaw_r','estop']);
 function aiRun(parsed){
   const hasFlight=parsed.steps.some(s=>FLIGHT_KINDS.has(s.kind));
-  addBot(parsed.compound ? ('好的，分 '+parsed.steps.length+' 步执行（可随时中止/接管）：') : '好的，正在执行：');
+  addBot(parsed.compound ? ('好的，分 '+parsed.steps.length+' 步执行：') : '好的，正在执行：');
   const c=cmdCardEl(parsed); msgs.appendChild(c); scroll();
   const seqEls=c.querySelectorAll('.sq'), fill=c.querySelector('.runbar i');
   running={card:c, timers:[], aborted:false, flight:hasFlight};

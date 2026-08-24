@@ -290,7 +290,9 @@ function resumeWayline(auto){
   clearResumeCd();
   if(running){ running.silent=true; abortAI('恢复航线'); }
   if(typeof flightAuth!=='undefined'&&flightAuth){ flightAuth.checked=false; updateFlightLock(); }
-  clearRiverScene(); st.gimbal=0; applyScene(); refreshHud();
+  if(document.body.classList.contains('river-focus')){   // 支线任务收口：镜头回默认巡检视角
+    clearRiverScene(); st.gimbal=0; st.zoom=1.0; applyScene(); refreshHud();
+  }
   setSource('auto');
   addBot(auto ? '↩ 5 秒倒计时结束，已<b>自动恢复航线</b>，任务继续巡航。' : '↩ 已恢复航线，任务继续巡航。');
   toast(auto ? '已自动恢复航线，任务继续' : '已恢复航线，任务继续');

@@ -17,10 +17,8 @@ function setSource(s){
   cur=s;
   const map={auto:['任务自动 · 巡检执行中','src-auto'], ai:['AI 操控','src-ai'], manual:['手动操控','src-manual'], dispose:['AI 处置中 · 操控已锁定','src-dispose'], pause:['航线已暂停 · 待处置事件','src-dispose']};
   const b=$('#srcBadge'); b.textContent='控制源：'+map[s][0]; b.className='srcbadge '+map[s][1];
-  $('#resumeBtn').style.display = (s==='auto'||s==='dispose'||s==='pause')?'none':'inline-flex';
   document.body.classList.toggle('aictrl', s==='ai');   // AI 操控时锁定手动面板
 }
-$('#resumeBtn').onclick=()=>{ if(running){ running.silent=true; abortAI('交还自动任务'); } if(typeof flightAuth!=='undefined'&&flightAuth){ flightAuth.checked=false; updateFlightLock(); } setSource('auto'); toast('已交还自动巡检任务'); };
 
 /* ---------- 面板开关 ---------- */
 function openPanel(){ panel.classList.add('open'); document.body.classList.add('drawer-open'); fab.classList.add('hidden'); }
@@ -257,6 +255,7 @@ function doEstop(reason){
   if(running){ running.silent=true; abortAI(reason); }
   applyAction('estop'); setSource('manual');
   openPanel(); addBot('■ <b>已急停</b>：立即原地悬停，进行中的指令已终止<span class="tm"> · '+nowTime()+'</span>。');
+  returnWaylineBubble();
   toast('已急停');
 }
 { const eb=$('#estopFloat'); if(eb) eb.onclick=()=>doEstop('急停按钮'); }
@@ -288,7 +287,9 @@ function manualDispose(){
   closeAlarm(); setSource('manual');
   manual.classList.add('open'); $('#openManual').classList.add('on');
   flightAuth.checked=true; updateFlightLock();
-  toast('已人工接管处置，航线保持暂停，已开启飞行控制权；完成后点「交还自动任务」恢复航线');
+  openPanel();
+  returnWaylineBubble('已人工接管处置，航线保持暂停，已开启飞行控制权。');
+  toast('已人工接管处置，航线保持暂停，已开启飞行控制权');
 }
 
 /* 2c) AI 智能处置 → 实况智能体进入处置模式：输入区隐藏、底部两按钮常驻 */
@@ -329,8 +330,9 @@ function exitDisposal(mode, card){
     manual.classList.add('open'); $('#openManual').classList.add('on');
     flightAuth.checked=true; updateFlightLock();
     if(dt) dt.innerHTML='✅ 已终止 AI 处置 · 转人工接管';
-    if(ds) ds.innerHTML='已取得设备控制权，<b>由你手动操作</b>；航线保持暂停，处置完成后点【▶ 交还自动任务】恢复航线。';
-    addBot('已终止 AI 处置。已取得设备控制权，<b>由你手动操作</b>。处置完成后请恢复航线。');
+    if(ds) ds.innerHTML='已取得设备控制权，<b>由你手动操作</b>；航线保持暂停，处置完成后点【↩ 返回航线】恢复航线。';
+    addBot('已终止 AI 处置。已取得设备控制权，<b>由你手动操作</b>。');
+    returnWaylineBubble();
     toast('已转人工接管');
   } else if(mode==='done'){
     setSource('auto');
@@ -379,6 +381,7 @@ function takeover(){
   if(cur==='manual') return;
   if(running){ running.silent=true; abortAI('切换手动操控'); }
   setSource('manual'); toast('已切换为手动操控');
+  returnWaylineBubble('已切换为手动操控，航线保持暂停。');
 }
 /* 飞行控制权：开启后才能操控飞行盘；云台 / 变焦不受限 */
 const flightAuth=$('#flightAuth');

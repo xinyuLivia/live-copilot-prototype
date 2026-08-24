@@ -35,7 +35,7 @@ const CHIPS = [
   {cat:'组合动作'},
   '上升到50米并云台垂直向下','原地转一圈每90度停2秒','升10米看全景后回原高度',
   {cat:'单动作'},
-  '向前飞5米','上升3米','左转30度','云台向下','变焦到5倍','返航降落'
+  '向前飞5米','上升3米','左转30度','云台向下','变焦到5倍','云台回中'
 ];
 function renderChips(){
   chips.innerHTML='';
@@ -75,8 +75,6 @@ function parseOne(q){
   if(/低头/.test(q)){ const d=cap(num(q,15),90); return step('g_set','🎯','云台下压',`云台俯仰 → -${d}°`, -d); }
   // 飞行
   if(/急停|紧急/.test(q)) return step('estop','■','急停','立即原地悬停');
-  if(/返航|降落|回家|回巢|回来/.test(q)) return step('rtl','⛘','返航降落','返回起飞点并降落');
-  if(/起飞/.test(q)){ const a=cap(num(q,10),120); return step('takeoff','⛘','起飞',`起飞至 ${a} m`,a); }
   if(/悬停|停住|hover|别动|保持位置/i.test(q)) return step('hover','⏸','悬停','保持当前位置悬停');
   if(/到\s*\d+\s*米|高度\s*\d+|到\s*\d+\s*m/i.test(q) && /(上升|升|拉高|下降|降低|高度|爬升)/.test(q)){
     const a=cap(num(q,st.alt),120); return step('alt_to', a>=st.alt?'⬆':'⬇', a>=st.alt?'上升到目标高度':'下降到目标高度', `高度 → ${a} m`, a);
@@ -418,8 +416,12 @@ function send(){
   const t=typing();
   setTimeout(()=>{
     t.remove();
+    if(/返航|降落|回家|回巢|回来|起飞|结束任务|终止任务|返回起飞点|结束巡检/.test(q)){
+      addBot('「返航 / 降落 / 起飞 / 结束任务」属于<b>主任务级操作</b>，会影响巡检主任务，实况操控不做。<br>如需请在任务面板操作（如左侧【一键返航】）。');
+      return;
+    }
     const parsed=parseCmd(q);
-    if(!parsed){ addBot('抱歉，我没太理解这条指令。可以试试这样说："向前飞 5 米""上升到 50 米，云台朝下""原地转一圈，每 90 度停 2 秒""变焦到 5 倍""返航降落"。'); return; }
+    if(!parsed){ addBot('抱歉，我没太理解这条指令。可以试试这样说："向前飞 5 米""上升到 50 米，云台朝下""原地转一圈，每 90 度停 2 秒""变焦到 5 倍""云台回中"。'); return; }
     if(parsed.steps.length===1 && parsed.steps[0].kind==='estop'){ doEstop('对话急停'); return; }
     aiRun(parsed);
   }, 700);

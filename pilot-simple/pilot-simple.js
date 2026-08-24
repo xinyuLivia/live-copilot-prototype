@@ -405,8 +405,9 @@ document.querySelectorAll('[data-m]').forEach(btn=>{
     btn.classList.add('lit'); setTimeout(()=>btn.classList.remove('lit'),300);
   });
 });
-$('#mGim').addEventListener('input',e=>{ takeover(); st.gimbal=+e.target.value; applyScene(); refreshHud(); });
-$('#mZoom').addEventListener('input',e=>{ takeover(); st.zoom=(+e.target.value)/10; applyScene(); refreshHud(); });
+/* 云台 / 变焦：叠加执行，不改变控制源、不需飞行控制权 */
+$('#mGim').addEventListener('input',e=>{ st.gimbal=+e.target.value; applyScene(); refreshHud(); flash('🎯 云台 '+st.gimbal+'°'); });
+$('#mZoom').addEventListener('input',e=>{ st.zoom=(+e.target.value)/10; applyScene(); refreshHud(); flash('🔎 变焦 '+st.zoom.toFixed(1)+'x'); });
 
 /* ============ 发送 ============ */
 function send(){

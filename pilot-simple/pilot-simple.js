@@ -1,4 +1,6 @@
-/* 智能操控 · 简版 · AI Pilot —— 方案A：AI 对话抽屉 ↔ 手动面板 联动 + 一触接管 */
+/* 实况智能体（Live Copilot）· 智能操控简版
+   交互主线：下达指令 → 立即暂停航线并悬停 → 拆解动作并执行 → 完成后 5 秒倒计时恢复航线（可手动立即恢复）
+   高阶能力：支线任务「巡检河岸并录像」——识别河岸 → 云台对准（占画面约 75%）→ 沿河堤 20 m 录像 → 回主航线 */
 const $ = s => document.querySelector(s);
 const fab=$('#fab'), panel=$('#panel'), msgs=$('#msgs'), input=$('#input'), chips=$('#chips'),
       vscene=$('#vscene'), actflash=$('#actflash'), manual=$('#manual');
@@ -30,6 +32,8 @@ document.querySelectorAll('.views .vw').forEach(v=>v.onclick=()=>{ document.quer
 
 /* ---------- 快捷指令 ---------- */
 const CHIPS = [
+  {cat:'支线任务'},
+  '请对前面的河道进行巡检并录像',
   {cat:'组合动作'},
   '上升到50米并云台垂直向下','原地转一圈每90度停2秒','升10米看全景后回原高度',
   {cat:'单动作'},
@@ -90,8 +94,21 @@ function parseOne(q){
 function step(kind,ico,title,param,n){ return {kind,ico,title,param,n}; }
 function pause(sec){ return step('pause','⏳','停顿',`停顿 ${sec} 秒`,sec); }
 
+/* 支线任务：巡检河岸并录像（高阶能力，1030 发布会演示场景） */
+function riverTask(){
+  return {label:'支线任务 · 巡检河岸并录像', ico:'🛶', compound:true, subtask:true, steps:[
+    {kind:'river_scan',   ico:'🛰', title:'识别河岸',      param:'从画面识别河岸走向与方位', dur:2200},
+    {kind:'river_gimbal', ico:'🎯', title:'云台对准河岸',  param:'云台 → -35°，河岸占画面 75%', dur:2200},
+    {kind:'rec_start',    ico:'⏺', title:'开始录像',      param:'支线任务全程录像', dur:1500},
+    {kind:'river_fly',    ico:'🛶', title:'沿河堤巡检',    param:'沿河堤飞行 20 m，云台动态跟随', n:20, dur:5200},
+    {kind:'rec_stop',     ico:'⏹', title:'结束录像',      param:'录像归档，主航线未改动', dur:1500}
+  ]};
+}
+
 /* 整句 → {label, ico, steps[], compound} */
 function parseCmd(q){
+  // 高阶：支线任务巡检（河道 / 河岸 / 河堤）
+  if(/河(道|岸|堤|流|渠)|沿河/.test(q)) return riverTask();
   // 模板：组合场景
   if(/转一圈|转圈|环视|绕一圈|360/.test(q)){
     const stepDeg = /(\d+)\s*度/.test(q)? +RegExp.$1 : 90;
@@ -149,9 +166,17 @@ function applyAction(kind,n){
     case 'zoom_reset': st.zoom=1.0; flash('🔎 变焦复位'); applyScene(); break;
     case 'estop':   setSpd(0.0); flash('■ 已急停'); break;
     case 'pause':   setSpd(0.0); break;
+    /* 支线任务巡检 */
+    case 'river_scan':   flash('🛰 已识别河岸走向'); break;
+    case 'river_gimbal': st.gimbal=-35; applyScene(); document.body.classList.add('river-focus'); flash('🎯 云台对准河岸 · 占画面 78%'); break;
+    case 'rec_start':    document.body.classList.add('recording'); flash('⏺ 开始录像'); break;
+    case 'river_fly':    flash('🛶 沿河堤飞行 '+n+' m'); boost(5000); break;
+    case 'rec_stop':     document.body.classList.remove('recording'); flash('⏹ 录像已归档'); break;
   }
   refreshHud();
 }
+/* 支线任务视觉复位（恢复航线时调用） */
+function clearRiverScene(){ document.body.classList.remove('river-focus','recording'); }
 
 /* HUD / 手动面板同步 */
 function refreshHud(){
@@ -181,19 +206,17 @@ function cmdCardEl(parsed){
   c.querySelector('.abort').onclick=()=>abortAI('用户中止');
   return c;
 }
-const FLIGHT_KINDS=new Set(['forward','back','left','right','up','down','alt_to','takeoff','rtl','hover','yaw_l','yaw_r','estop']);
 function aiRun(parsed){
-  const hasFlight=parsed.steps.some(s=>FLIGHT_KINDS.has(s.kind));
   addBot(parsed.compound ? ('好的，分 '+parsed.steps.length+' 步执行：') : '好的，正在执行：');
   const c=cmdCardEl(parsed); msgs.appendChild(c); scroll();
   const seqEls=c.querySelectorAll('.sq'), fill=c.querySelector('.runbar i');
-  running={card:c, timers:[], aborted:false, flight:hasFlight};
+  running={card:c, timers:[], aborted:false, subtask:!!parsed.subtask};
   let i=0;
   function nextStep(){
     if(running.aborted) return;
     if(i>=parsed.steps.length){ finish(); return; }
     const s=parsed.steps[i], el=seqEls[i]; el.classList.add('active'); litManual(s);
-    const dur = s.kind==='pause' ? s.n*1000 : 1600;
+    const dur = s.kind==='pause' ? s.n*1000 : (s.dur || 1600);
     if(s.kind==='pause') flash('⏳ 停顿 '+s.n+'s');
     const t1=setTimeout(()=>{
       applyAction(s.kind, s.n);
@@ -205,53 +228,87 @@ function aiRun(parsed){
   }
   function finish(){
     c.classList.add('done'); c.querySelector('.cs').textContent='AI 操控 · 已完成'; const ab=c.querySelector('.abort'); if(ab) ab.remove();
-    addBot('✅ 已完成：<b>'+parsed.label+'</b><span class="tm"> · '+nowTime()+'</span>');
+    const wasSubtask=running.subtask;
     running=null;
-    if(hasFlight) returnWaylineBubble('操控已完成，无人机悬停中。');
+    if(wasSubtask){
+      addBot('✅ 支线任务完成：沿河堤巡检 <b>20 m</b>，全程录像已归档，河岸平均占画面 <b>78%</b>（目标 75%）。主巡检航线未改动。<span class="tm"> · '+nowTime()+'</span>');
+      addRiverRecord();
+    } else {
+      addBot('✅ 已完成：<b>'+parsed.label+'</b><span class="tm"> · '+nowTime()+'</span>');
+    }
+    resumeCountdown('操控已完成，无人机悬停中。');
   }
-  if(hasFlight){
-    setSource('ai');
-    applyAction('hover'); flash('⏸ 暂停航线并悬停');
-    addBot('⏸ 已暂停航线并悬停，进入实时飞控（AI 操控）…');
-    const t0=setTimeout(()=>{ if(!running.aborted) nextStep(); }, 1400);
-    running.timers.push(t0);
-  } else {
-    addBot('航线继续巡航，叠加执行云台 / 相机指令，无需暂停航线。');
-    nextStep();
-  }
+  /* 统一：下达指令即暂停航线并悬停，再解析拆解、立即执行 */
+  setSource('ai');
+  applyAction('hover'); flash('⏸ 暂停航线并悬停');
+  addBot('⏸ 已暂停航线并悬停，正在拆解动作并执行…');
+  const t0=setTimeout(()=>{ if(running && !running.aborted) nextStep(); }, 1400);
+  running.timers.push(t0);
 }
 function abortAI(reason){
   if(!running) return;
-  const wasFlight=running.flight, silent=running.silent;
+  const silent=running.silent;
   running.aborted=true; running.timers.forEach(clearTimeout);
   const c=running.card; if(c){ c.classList.add('aborted'); const cs=c.querySelector('.cs'); if(cs) cs.textContent='已终止操控'; const ab=c.querySelector('.abort'); if(ab) ab.remove(); }
   running=null;
-  if(silent) return;                       // 被处置/交还等外部流程抢占时，不重复提示
-  if(wasFlight){
-    applyAction('hover');
-    addBot('■ 已终止操控（'+reason+'），无人机<b>原地悬停</b>。');
-    returnWaylineBubble();
-  } else {
-    addBot('■ 已终止操控（'+reason+'）。');
-  }
+  if(silent) return;                       // 被处置等外部流程抢占时，不重复提示
+  applyAction('hover');
+  addBot('■ 已终止（'+reason+'），无人机<b>原地悬停</b>。');
+  returnWaylineBubble();                   // 主动终止不自动恢复，交给用户决定
 }
-/* 智能体内提供「返回航线」按钮：点击后恢复航线、解锁 */
+
+/* 恢复航线：手动按钮（终止 / 接管后）—— 不倒计时、不自动 */
 function returnWaylineBubble(prefix){
+  clearResumeCd();
   const b=document.createElement('div'); b.className='bubble bot';
-  b.innerHTML=(prefix?prefix+'<br>':'')+'需要继续巡检可返回航线。<br><button class="retway">↩ 返回航线</button>';
+  b.innerHTML=(prefix?prefix+'<br>':'')+'需要继续巡检可恢复航线。<br><button class="retway">↩ 恢复航线</button>';
   msgs.appendChild(b); scroll();
   const btn=b.querySelector('.retway');
-  btn.onclick=()=>{ btn.disabled=true; btn.textContent='✓ 已返回航线'; resumeWayline(); };
+  btn.onclick=()=>{ btn.disabled=true; btn.textContent='✓ 已恢复航线'; resumeWayline(false); };
 }
-function resumeWayline(){
-  if(running){ running.silent=true; abortAI('返回航线'); }
+
+/* 恢复航线：执行完成后的 5 秒倒计时，未点击自动恢复 */
+let resumeCd=null;
+function clearResumeCd(){ if(resumeCd){ clearInterval(resumeCd.timer); if(resumeCd.btn) resumeCd.btn.disabled=true; resumeCd=null; } }
+function resumeCountdown(prefix){
+  clearResumeCd();
+  let left=5;
+  const b=document.createElement('div'); b.className='bubble bot';
+  b.innerHTML=(prefix?prefix+'<br>':'')
+    +'<span class="cdtip"><b class="cdn">'+left+'</b> 秒后自动恢复航线，也可立即恢复。</span><br>'
+    +'<button class="retway">↩ 恢复航线（<span class="cdn">'+left+'</span>）</button>';
+  msgs.appendChild(b); scroll();
+  const btn=b.querySelector('.retway');
+  btn.onclick=()=>{ clearResumeCd(); btn.disabled=true; btn.textContent='✓ 已恢复航线'; resumeWayline(false); };
+  resumeCd={btn, timer:setInterval(()=>{
+    left--;
+    if(left<=0){ clearResumeCd(); btn.textContent='✓ 已自动恢复航线'; resumeWayline(true); return; }
+    b.querySelectorAll('.cdn').forEach(n=>n.textContent=left);
+  },1000)};
+}
+function resumeWayline(auto){
+  clearResumeCd();
+  if(running){ running.silent=true; abortAI('恢复航线'); }
   if(typeof flightAuth!=='undefined'&&flightAuth){ flightAuth.checked=false; updateFlightLock(); }
+  clearRiverScene(); st.gimbal=0; applyScene(); refreshHud();
   setSource('auto');
-  addBot('↩ 已返回航线，任务继续巡航。');
-  toast('已返回航线，任务继续');
+  addBot(auto ? '↩ 5 秒倒计时结束，已<b>自动恢复航线</b>，任务继续巡航。' : '↩ 已恢复航线，任务继续巡航。');
+  toast(auto ? '已自动恢复航线，任务继续' : '已恢复航线，任务继续');
+}
+
+/* 左侧事件流追加支线任务记录 */
+function addRiverRecord(){
+  const list=$('#evlist'); if(!list) return;
+  const ev=document.createElement('div'); ev.className='ev';
+  ev.innerHTML='<div class="evh"><span class="dot"></span>支线任务<span class="evr">巡检完成</span></div>'
+    +'<div class="evsub">河岸巡检并录像 · 沿河堤 20 m</div>'
+    +'<div class="evthumb rvthumb">🛶<span class="rvtag">● 录像 00:12</span></div>'
+    +'<div class="disp"><div class="dh">✅ 支线完成 · 河岸占画面 <b>78%</b> · 主航线未改动</div></div>';
+  list.appendChild(ev); list.scrollTop=list.scrollHeight;
 }
 function doEstop(reason){
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
+  clearResumeCd();
   if(running){ running.silent=true; abortAI(reason); }
   applyAction('estop'); setSource('manual');
   openPanel(); addBot('■ <b>已急停</b>：立即原地悬停，进行中的指令已终止<span class="tm"> · '+nowTime()+'</span>。');
@@ -267,6 +324,7 @@ function doEstop(reason){
 /* 1) 告警触发：自动暂停航线，弹出待处置弹窗 + 30s 倒计时 */
 function triggerAlarm(){
   if(disposing) return;
+  clearResumeCd();
   if(running){ running.silent=true; abortAI('告警处置抢占'); }
   setSource('pause');
   toast('检测到车辆违停，已自动暂停航线并悬停');
@@ -330,7 +388,7 @@ function exitDisposal(mode, card){
     manual.classList.add('open'); $('#openManual').classList.add('on');
     flightAuth.checked=true; updateFlightLock();
     if(dt) dt.innerHTML='✅ 已终止 AI 处置 · 转人工接管';
-    if(ds) ds.innerHTML='已取得设备控制权，<b>由你手动操作</b>；航线保持暂停，处置完成后点【↩ 返回航线】恢复航线。';
+    if(ds) ds.innerHTML='已取得设备控制权，<b>由你手动操作</b>；航线保持暂停，处置完成后点【↩ 恢复航线】恢复航线。';
     addBot('已终止 AI 处置。已取得设备控制权，<b>由你手动操作</b>。');
     returnWaylineBubble();
     toast('已转人工接管');
@@ -379,6 +437,7 @@ $('#dispTakeover').onclick=()=>{ if(disposing) exitDisposal('manual', disposeCar
 function takeover(){
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
   if(cur==='manual') return;
+  clearResumeCd();
   if(running){ running.silent=true; abortAI('切换手动操控'); }
   setSource('manual'); toast('已切换为手动操控');
   returnWaylineBubble('已切换为手动操控，航线保持暂停。');
@@ -410,6 +469,7 @@ $('#mZoom').addEventListener('input',e=>{ st.zoom=(+e.target.value)/10; applySce
 function send(){
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
   const q=input.value.trim(); if(!q) return;
+  clearResumeCd();                 // 下达新指令即取消未完成的恢复航线倒计时
   if(!panel.classList.contains('open')) openPanel();
   addUser(q); input.value='';
   const t=typing();
@@ -429,7 +489,7 @@ $('#sendBtn').onclick=send;
 input.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
 
 /* ============ 语音下发指令（演示：模拟语音识别） ============ */
-const voiceSamples=['上升到 50 米，云台朝下','向前飞 10 米再拉个全景','原地顺时针转一圈，每 90 度停 2 秒','变焦到 5 倍看清远处','云台转到正下方'];
+const voiceSamples=['请对前面的河道进行巡检并录像','上升到 50 米，云台朝下','向前飞 10 米再拉个全景','原地顺时针转一圈，每 90 度停 2 秒','变焦到 5 倍看清远处'];
 let listening=false;
 $('#micBtn').onclick=()=>{
   const mic=$('#micBtn');

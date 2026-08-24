@@ -157,10 +157,6 @@ function applyAction(kind,n){
 
 /* HUD / 手动面板同步 */
 function refreshHud(){
-  $('#hZoom').textContent=st.zoom.toFixed(1)+'x';
-  $('#hGimbal').textContent=st.gimbal+'°';
-  $('#hHeading').textContent=st.heading+'°';
-  $('#hAlt').textContent=st.alt.toFixed(1)+'m';
   $('#mGim').value=st.gimbal; $('#mGimVal').textContent=st.gimbal+'°';
   $('#mZoom').value=Math.round(st.zoom*10); $('#mZoomVal').textContent=st.zoom.toFixed(1)+'x';
 }

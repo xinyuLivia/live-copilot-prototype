@@ -578,6 +578,7 @@ function stopRec(commit){
   const sb=$('#sendBtn'); sb.classList.remove('nudge'); void sb.offsetWidth; sb.classList.add('nudge');
 }
 
+/* 录音态里麦克风被录音条取代，结束只有条内的 ✓（或长按松手），取消只有 ✕ / Esc */
 const mic=$('#micBtn');
 let holdTimer=null, wasHold=false;
 mic.addEventListener('mousedown', ()=>{ wasHold=false; holdTimer=setTimeout(()=>{ wasHold=true; startRec(false); },300); });
@@ -585,9 +586,10 @@ mic.addEventListener('mouseup', ()=>{ clearTimeout(holdTimer); if(wasHold) stopR
 mic.addEventListener('mouseleave', ()=>{ clearTimeout(holdTimer); });
 mic.addEventListener('click', e=>{
   if(wasHold){ wasHold=false; return; }               // 长按已在 mouseup 处理
-  if(e.altKey && !rec){ startRec(true); return; }     // 演示：没听到声音
-  rec ? stopRec(true) : startRec(false);
+  if(e.altKey){ startRec(true); return; }             // 演示：没听到声音
+  startRec(false);
 });
+$('#recDone').onclick=()=>stopRec(true);
 $('#recCancel').onclick=()=>stopRec(false);
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && rec) stopRec(false); });
 

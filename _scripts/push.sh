@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# 提交并推送 live-copilot-prototype（本目录是独立 git 仓库，指向 GitHub Pages）
-# 用法：bash _scripts/push.sh "commit message"
+# 推送原型到 GitHub Pages
 set -e
-
 cd "$(dirname "$0")/.."
 git add -A
-git commit -m "${1:-prototype: update}"
+git commit -m "人工处置：新增处置态与底部收口按钮，处置中支持 AI 代飞；徽标文案对齐 PRD；去掉面板联动高亮"
 git push
 git log --oneline -1

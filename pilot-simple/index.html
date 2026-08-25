@@ -26,9 +26,9 @@
   .topbar .demo{ color:#c98a3a; font-size:11.5px; cursor:pointer; border:1px solid rgba(245,158,11,.4); border-radius:10px; padding:2px 9px; }
   .topbar .demo:hover{ color:#ffd591; border-color:var(--warn); }
   /* 处置期间：操控入口锁定；语音 / 文本 / 快捷输入整块隐藏 */
-  body.oplocked #openManual, body.oplocked .estopf{ opacity:.4; pointer-events:none; }
+  body.oplocked #openManual{ opacity:.4; pointer-events:none; }
   body.oplocked .bottom .ctrlbtn{ opacity:.4; pointer-events:none; }
-  /* AI 操控中：手动操控锁定（置灰），仅保留急停 */
+  /* AI 操控中：手动操控锁定（置灰），需先在智能体【终止】 */
   body.aictrl #openManual{ opacity:.4; pointer-events:none; }
   body.aictrl .manual.open{ opacity:.55; pointer-events:none; }
   /* 智能体内「恢复航线」按钮 */
@@ -204,10 +204,6 @@
   .actflash{ position:absolute; left:50%; top:44%; transform:translate(-50%,-50%) scale(.8); z-index:8; opacity:0; transition:.2s;
     background:rgba(47,123,255,.9); color:#fff; font-size:14px; padding:8px 16px; border-radius:10px; box-shadow:0 6px 20px rgba(47,123,255,.5); pointer-events:none; }
   .actflash.on{ opacity:1; transform:translate(-50%,-50%) scale(1); }
-
-  /* 急停（置于底部工具栏，不遮挡画面） */
-  .estopf{ display:flex; align-items:center; gap:6px; background:rgba(239,68,68,.16); border:1px solid rgba(239,68,68,.6); color:#ffb3b3; font-size:13px; font-weight:600; padding:7px 16px; border-radius:8px; cursor:pointer; }
-  .estopf:hover{ background:rgba(239,68,68,.28); }
 
   /* 底部工具栏（对齐真实实况：画面布局切换 + 操控入口） */
   .bottom{ position:absolute; left:244px; right:0; bottom:0; height:54px; background:var(--panel); border-top:1px solid var(--line); display:flex; align-items:center; justify-content:center; gap:16px; }
@@ -468,6 +464,6 @@
   <div class="toast" id="toast"></div>
 </div>
 
-<script src="pilot-simple.js?v=20260824river2"></script>
+<script src="pilot-simple.js?v=20260825noestop"></script>
 </body>
 </html>

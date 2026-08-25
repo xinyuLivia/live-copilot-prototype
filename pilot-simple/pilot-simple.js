@@ -76,7 +76,6 @@ function parseOne(q){
   if(/抬头|仰视/.test(q)){ const d=cap(num(q,15),90); return step('g_set','🎯','云台抬头',`云台俯仰 → +${d}°`, d); }
   if(/低头/.test(q)){ const d=cap(num(q,15),90); return step('g_set','🎯','云台下压',`云台俯仰 → -${d}°`, -d); }
   // 飞行
-  if(/急停|紧急/.test(q)) return step('estop','■','急停','立即原地悬停');
   if(/悬停|停住|hover|别动|保持位置/i.test(q)) return step('hover','⏸','悬停','保持当前位置悬停');
   if(/到\s*\d+\s*米|高度\s*\d+|到\s*\d+\s*m/i.test(q) && /(上升|升|拉高|下降|降低|高度|爬升)/.test(q)){
     const a=cap(num(q,st.alt),120); return step('alt_to', a>=st.alt?'⬆':'⬇', a>=st.alt?'上升到目标高度':'下降到目标高度', `高度 → ${a} m`, a);
@@ -164,7 +163,6 @@ function applyAction(kind,n){
     case 'g_set':   st.gimbal=Math.max(-90,Math.min(30,n)); flash('🎯 云台 '+st.gimbal+'°'); applyScene(); break;
     case 'zoom':    st.zoom=n; flash('🔎 变焦 '+n.toFixed(1)+'x'); applyScene(); break;
     case 'zoom_reset': st.zoom=1.0; flash('🔎 变焦复位'); applyScene(); break;
-    case 'estop':   setSpd(0.0); flash('■ 已急停'); break;
     case 'pause':   setSpd(0.0); break;
     /* 支线任务巡检 */
     case 'river_scan':   flash('🛰 已识别河岸走向'); break;
@@ -308,17 +306,6 @@ function addRiverRecord(){
     +'<div class="disp"><div class="dh">✅ 支线完成 · 河岸占画面 <b>78%</b> · 主航线未改动</div></div>';
   list.appendChild(ev); list.scrollTop=list.scrollHeight;
 }
-function doEstop(reason){
-  if(disposing){ toast('处置进行中，操控暂不可用'); return; }
-  clearResumeCd();
-  if(running){ running.silent=true; abortAI(reason); }
-  applyAction('estop'); setSource('manual');
-  openPanel(); addBot('■ <b>已急停</b>：立即原地悬停，进行中的指令已终止<span class="tm"> · '+nowTime()+'</span>。');
-  returnWaylineBubble();
-  toast('已急停');
-}
-{ const eb=$('#estopFloat'); if(eb) eb.onclick=()=>doEstop('急停按钮'); }
-
 /* ============ 与「智能处置」融合（沿用智能处置核心交互） ============ */
 /* 告警 → 自动暂停航线 → 待处置弹窗（暂不处理 / 人工接管处置 / AI 智能处置）
    仅选择 AI 智能处置才在实况智能体内出现处置内容；处置期间操控输入区隐藏、底部常驻两按钮 */
@@ -477,13 +464,12 @@ function send(){
   const t=typing();
   setTimeout(()=>{
     t.remove();
-    if(/返航|降落|回家|回巢|回来|起飞|结束任务|终止任务|返回起飞点|结束巡检/.test(q)){
-      addBot('「返航 / 降落 / 起飞 / 结束任务」属于<b>主任务级操作</b>，会影响巡检主任务，实况操控不做。<br>如需请在任务面板操作（如左侧【一键返航】）。');
+    if(/急停|紧急|返航|降落|回家|回巢|回来|起飞|结束任务|终止任务|返回起飞点|结束巡检/.test(q)){
+      addBot('「急停 / 返航 / 降落 / 起飞 / 结束任务」属于<b>主任务级操作</b>，会终结或改变巡检主任务，实况操控不做。<br>要立即停下请点执行卡上的【终止】；如需返航请在任务面板操作（如左侧【一键返航】）。');
       return;
     }
     const parsed=parseCmd(q);
     if(!parsed){ addBot('抱歉，我没太理解这条指令。可以试试这样说："向前飞 5 米""上升到 50 米，云台朝下""原地转一圈，每 90 度停 2 秒""变焦到 5 倍""云台回中"。'); return; }
-    if(parsed.steps.length===1 && parsed.steps[0].kind==='estop'){ doEstop('对话急停'); return; }
     aiRun(parsed);
   }, 700);
 }

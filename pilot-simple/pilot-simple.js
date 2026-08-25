@@ -37,8 +37,6 @@ document.querySelectorAll('.views .vw').forEach(v=>v.onclick=()=>{ document.quer
 
 /* ---------- 快捷指令 ---------- */
 const CHIPS = [
-  {cat:'支线任务'},
-  '请对前面的河道进行巡检并录像',
   {cat:'组合动作'},
   '上升到50米并云台垂直向下','原地转一圈每90度停2秒','升10米看全景后回原高度',
   {cat:'单动作'},

@@ -59,7 +59,6 @@ function scroll(){ msgs.scrollTop=msgs.scrollHeight; }
 function addUser(t){ const b=document.createElement('div'); b.className='bubble user'; b.textContent=t; msgs.appendChild(b); scroll(); if(!chipsPinned) setChipsOpen(false); }
 function addBot(html){ const b=document.createElement('div'); b.className='bubble bot'; b.innerHTML=html; msgs.appendChild(b); scroll(); }
 function typing(){ const t=document.createElement('div'); t.className='typing'; t.innerHTML='<i></i><i></i><i></i>'; msgs.appendChild(t); scroll(); return t; }
-function listeningBubble(){ const b=document.createElement('div'); b.className='listenrow'; b.innerHTML='<span class="lmic">🎤</span><span class="wave"><i></i><i></i><i></i><i></i></span><span class="ltxt">聆听中…请说出指令</span>'; msgs.appendChild(b); scroll(); return b; }
 function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1800); }
 function flash(t){ actflash.textContent=t; actflash.classList.add('on'); setTimeout(()=>actflash.classList.remove('on'),1000); }
 function nowTime(){ const d=new Date(); return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':'); }
@@ -274,18 +273,24 @@ function returnWaylineBubble(prefix){
 
 /* 恢复航线：执行完成后的 5 秒倒计时，未点击自动恢复 */
 let resumeCd=null;
-function clearResumeCd(){ if(resumeCd){ clearInterval(resumeCd.timer); if(resumeCd.btn) resumeCd.btn.disabled=true; resumeCd=null; } }
+function clearResumeCd(){
+  if(!resumeCd) return;
+  clearInterval(resumeCd.timer);
+  if(resumeCd.tip) resumeCd.tip.remove();      // 倒计时走完或被打断后，该提示不再成立
+  if(resumeCd.btn) resumeCd.btn.disabled=true;
+  resumeCd=null;
+}
 function resumeCountdown(prefix){
   clearResumeCd();
   let left=5;
   const b=document.createElement('div'); b.className='bubble bot';
   b.innerHTML=(prefix?prefix+'<br>':'')
-    +'<span class="cdtip"><b class="cdn">'+left+'</b> 秒后自动恢复航线，也可立即恢复。</span><br>'
+    +'<div class="cdtip"><b class="cdn">'+left+'</b> 秒后自动恢复航线，也可立即恢复。</div>'
     +'<button class="retway">↩ 恢复航线（<span class="cdn">'+left+'</span>）</button>';
   msgs.appendChild(b); scroll();
   const btn=b.querySelector('.retway');
   btn.onclick=()=>{ clearResumeCd(); btn.disabled=true; btn.textContent='✓ 已恢复航线'; resumeWayline(false); };
-  resumeCd={btn, timer:setInterval(()=>{
+  resumeCd={btn, tip:b.querySelector('.cdtip'), timer:setInterval(()=>{
     left--;
     if(left<=0){ clearResumeCd(); btn.textContent='✓ 已自动恢复航线'; resumeWayline(true); return; }
     b.querySelectorAll('.cdn').forEach(n=>n.textContent=left);
@@ -351,6 +356,7 @@ function enterDisposal(){
   if(disposing) return;
   closeAlarm();
   if(running){ running.silent=true; abortAI('告警处置抢占'); }
+  stopRec(false);                  // 处置接管后输入区隐藏，进行中的语音一并丢弃
   disposing=true;
   openPanel();
   document.body.classList.add('oplocked');
@@ -483,23 +489,75 @@ function send(){
 $('#sendBtn').onclick=send;
 input.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
 
-/* ============ 语音下发指令（演示：模拟语音识别） ============ */
+/* ============ 语音下发指令 ============
+   录音时原地把输入框换成录音条：实时音量波形 + 计时 + 边说边出字（灰=未定稿）。
+   结束后转写文字落回输入框，由用户确认发送——飞行指令不做自动发送。
+   演示入口：点按开始/结束；按住麦克风说话、松手结束；Alt+点击模拟没听到声音。   */
 const voiceSamples=['请对前面的河道进行巡检并录像','上升到 50 米，云台朝下','向前飞 10 米再拉个全景','原地顺时针转一圈，每 90 度停 2 秒','变焦到 5 倍看清远处'];
-let listening=false;
-$('#micBtn').onclick=()=>{
-  const mic=$('#micBtn');
-  if(listening) return;
-  listening=true; mic.classList.add('listening');
+const inputbar=$('#inputbar'), recbar=$('#recbar'), recWave=$('#recWave'), recTime=$('#recTime'), recTxt=$('#recTxt');
+recWave.innerHTML='<i></i>'.repeat(9);
+let rec=null;
+
+function startRec(mute){
+  if(rec) return;
+  if(disposing){ toast('处置进行中，操控暂不可用'); return; }
   if(!panel.classList.contains('open')) openPanel();
-  const lb=listeningBubble();
-  setTimeout(()=>{
-    lb.remove();
-    const q=voiceSamples[Math.floor(Math.random()*voiceSamples.length)];
-    input.value=q;
-    mic.classList.remove('listening'); listening=false;
-    setTimeout(send, 300);
-  }, 1500);
-};
+  inputbar.classList.add('recording');
+  recbar.classList.toggle('mute', !!mute);
+  recTxt.className='rtxt partial';
+  recTxt.textContent = mute ? '没听到声音…' : '听着，请说指令…';
+  recTime.textContent='0:00';
+  const bars=[...recWave.children];
+  rec={sec:0, text:'', timers:[]};
+  rec.timers.push(setInterval(()=>{ rec.sec++; recTime.textContent='0:'+String(rec.sec).padStart(2,'0'); },1000));
+  rec.timers.push(setInterval(()=>{
+    bars.forEach(b=>{ b.style.height = mute ? '3px' : (4+Math.random()*12).toFixed(0)+'px'; });
+  },110));
+  if(mute){                              // 静音满 3 秒自动结束，并在对话里明确报错
+    rec.timers.push(setTimeout(()=>{
+      stopRec(false);
+      addBot('没听到声音，本次语音已取消。请检查浏览器 / 系统的麦克风授权，或直接用文字下发指令。');
+    },3000));
+    return;
+  }
+  const full=voiceSamples[Math.floor(Math.random()*voiceSamples.length)];
+  let i=0;
+  const typer=setInterval(()=>{
+    rec.text=full.slice(0,++i);
+    recTxt.textContent=rec.text;
+    recTxt.scrollLeft=recTxt.scrollWidth;    // 长句跟随显示最新说出的部分
+    if(i>=full.length){
+      clearInterval(typer);
+      recTxt.className='rtxt';           // 转写定稿：灰字转白
+      rec.timers.push(setTimeout(()=>stopRec(true), 1000));   // 静音满 1 秒自动结束
+    }
+  },200);                                  // 贴近真人语速，约 5 字 / 秒
+  rec.timers.push(typer);
+}
+
+function stopRec(commit){
+  if(!rec) return;
+  const txt=rec.text;
+  rec.timers.forEach(t=>{ clearTimeout(t); clearInterval(t); });
+  rec=null;
+  inputbar.classList.remove('recording');
+  if(!commit || !txt) return;
+  input.value=txt; input.focus();
+  const sb=$('#sendBtn'); sb.classList.remove('nudge'); void sb.offsetWidth; sb.classList.add('nudge');
+}
+
+const mic=$('#micBtn');
+let holdTimer=null, wasHold=false;
+mic.addEventListener('mousedown', ()=>{ wasHold=false; holdTimer=setTimeout(()=>{ wasHold=true; startRec(false); },300); });
+mic.addEventListener('mouseup', ()=>{ clearTimeout(holdTimer); if(wasHold) stopRec(true); });
+mic.addEventListener('mouseleave', ()=>{ clearTimeout(holdTimer); });
+mic.addEventListener('click', e=>{
+  if(wasHold){ wasHold=false; return; }               // 长按已在 mouseup 处理
+  if(e.altKey && !rec){ startRec(true); return; }     // 演示：没听到声音
+  rec ? stopRec(true) : startRec(false);
+});
+$('#recCancel').onclick=()=>stopRec(false);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && rec) stopRec(false); });
 
 /* ============ 任务计时（贴近真实实况） ============ */
 let elapsed=7*60+3;

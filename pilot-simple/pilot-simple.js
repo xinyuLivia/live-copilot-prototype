@@ -12,6 +12,7 @@ let running=null;        // 正在执行的 AI 操控序列
 let disposing=false;     // 是否处于 AI 智能处置中（处置期间操控被锁定）
 let mdisposing=false;    // 是否处于人工处置中（处置未收口，操控可用但不自动恢复航线）
 let dispTimer=null, alarmTimer=null, disposeCard=null;
+let preemptedLabel=null; // 被告警抢占中止的操控指令名，用于处置收口后提示可重下
 const PLACEHOLDER='下达飞行 / 云台指令（可组合）…';
 const PLATE='粤B·D7F92';   // 演示：AI 处置取证识别到的车牌
 
@@ -216,7 +217,7 @@ function aiRun(parsed){
   addBot(parsed.compound ? ('好的，分 '+parsed.steps.length+' 步执行：') : '好的，正在执行：');
   const c=cmdCardEl(parsed); msgs.appendChild(c); scroll();
   const seqEls=c.querySelectorAll('.sq'), fill=c.querySelector('.runbar i');
-  running={card:c, timers:[], aborted:false, subtask:!!parsed.subtask};
+  running={card:c, timers:[], aborted:false, subtask:!!parsed.subtask, label:parsed.label};
   let i=0;
   function nextStep(){
     if(running.aborted) return;
@@ -345,10 +346,19 @@ function addRiverRecord(){
 function triggerAlarm(){
   if(disposing) return;
   clearResumeCd();
+  /* 抢占正在执行的 AI 操控：静默中止序列，改由抢占提示统一说明 */
+  const preempted = running ? (running.label || '当前操控') : null;
   if(running){ running.silent=true; abortAI('告警处置抢占'); }
   setSource('pause');
   document.body.classList.add('oplocked');   // 从航线暂停起锁操控，直到弹窗三选一
   toast('检测到车辆违停，已自动暂停航线并悬停');
+  if(preempted){
+    preemptedLabel=preempted;
+    openPanel();
+    addBot('⚠️ 有新告警要先处置，<b>已停下当前操控</b>（'+preempted+'），无人机原地悬停。'
+      +'<br>请在右上角弹窗中选择处置方式：选【AI 智能处置】操控会锁定，选【人工接管处置】操控保留，处置收口后恢复。');
+    flash('⚠️ 新告警抢占 · 已停下当前操控');
+  }
   const m=$('#alarmModal'); m.classList.add('open');
   let left=30; const ring=$('#amRing'); ring.textContent=left;
   clearInterval(alarmTimer);
@@ -360,6 +370,10 @@ function closeAlarm(){ clearInterval(alarmTimer); $('#alarmModal').classList.rem
 function ignoreAlarm(expired){
   closeAlarm(); document.body.classList.remove('oplocked'); setSource('auto');
   toast(expired?'30 秒未选择，已按不处置恢复航线':'已选择暂不处理，航线已恢复');
+  if(preemptedLabel){
+    addBot('告警已按<b>暂不处理</b>关闭，航线已恢复，操控入口恢复可用。<br>需要继续刚才的「'+preemptedLabel+'」，再说一次即可。');
+    preemptedLabel=null;
+  }
 }
 /* 2b) 人工接管处置（只从待处置弹窗进入）→ 打开手动面板 + 飞行控制权，航线保持暂停，不出现 AI 处置内容
    处置未收口前航线不恢复：底部常驻【完成处置并恢复航线】，期间也可给智能体下指令代飞（P1） */
@@ -374,7 +388,9 @@ function enterManualDispose(){
   flightAuth.checked=true; updateFlightLock();
   openPanel();
   addBot('已<b>人工接管处置</b>。航线保持暂停、无人机悬停，已开启飞行控制权。'
-    +'<br>可用手动面板飞控，也可直接给我下指令代飞；取证完成后点下方【完成处置并恢复航线】。');
+    +'<br>可用手动面板飞控，也可直接给我下指令代飞；取证完成后点下方【完成处置并恢复航线】。'
+    +(preemptedLabel?'<br>刚才被打断的「'+preemptedLabel+'」需要继续的话，再说一次即可。':''));
+  preemptedLabel=null;
   toast('已人工接管处置，航线保持暂停');
 }
 
@@ -458,6 +474,10 @@ function exitDisposal(mode, card){
     addBot('✅ 已终止 AI 处置，航线已恢复，任务继续飞行。');
     toast('处置结束，航线已恢复');
   }
+  if(preemptedLabel){                    // 处置收口，抢占前被中止的操控可重下
+    addBot('操控入口已恢复。刚才被打断的「'+preemptedLabel+'」需要继续的话，再说一次即可。');
+    preemptedLabel=null;
+  }
 }
 /* 左侧「发现车辆违停」告警图片下方追加处置记录 */
 function addDispRecord(ok){
@@ -519,6 +539,7 @@ $('#mZoom').addEventListener('input',e=>{ st.zoom=(+e.target.value)/10; applySce
 /* ============ 发送 ============ */
 function send(){
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
+  if(document.body.classList.contains('oplocked')){ toast('有新告警待处置，请先在弹窗中选择处置方式'); return; }
   if(running){ toast('上一条指令还在执行，先点【终止】'); return; }
   const q=input.value.trim(); if(!q) return;
   clearResumeCd();                 // 下达新指令即取消未完成的恢复航线倒计时
@@ -551,6 +572,7 @@ let rec=null;
 function startRec(mute){
   if(rec) return;
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
+  if(document.body.classList.contains('oplocked')){ toast('有新告警待处置，请先在弹窗中选择处置方式'); return; }
   if(running){ toast('上一条指令还在执行，先点【终止】'); return; }
   inputbar.classList.add('recording');
   recbar.classList.toggle('mute', !!mute);

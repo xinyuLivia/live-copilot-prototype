@@ -3,7 +3,7 @@
    高阶能力：支线任务「巡检河岸并录像」——识别河岸 → 云台对准（占画面约 75%）→ 沿河堤逐点录像 → 回主航线 */
 const $ = s => document.querySelector(s);
 const fab=$('#fab'), panel=$('#panel'), msgs=$('#msgs'), input=$('#input'), chips=$('#chips'),
-      vscene=$('#vscene'), actflash=$('#actflash'), manual=$('#manual');
+      chipwrap=$('#chipwrap'), vscene=$('#vscene'), actflash=$('#actflash'), manual=$('#manual');
 
 /* 无人机状态 */
 const st = { alt:30.0, zoom:1.0, gimbal:0, heading:0, spd:0.0 };
@@ -46,10 +46,17 @@ function renderChips(){
     const c=document.createElement('div'); c.className='chip'; c.textContent=t; c.onclick=()=>{ input.value=t; send(); }; chips.appendChild(c);
   });
 }
+/* 无用户消息时展开；用户发出内容后自动收起。手动展开后不再自动收起 */
+let chipsPinned=false;
+function setChipsOpen(open){ chipwrap.classList.toggle('collapsed', !open); }
+$('#chiphead').onclick=()=>{
+  const nowOpen=chipwrap.classList.contains('collapsed');
+  setChipsOpen(nowOpen); chipsPinned=nowOpen;
+};
 
 /* ---------- 消息辅助 ---------- */
 function scroll(){ msgs.scrollTop=msgs.scrollHeight; }
-function addUser(t){ const b=document.createElement('div'); b.className='bubble user'; b.textContent=t; msgs.appendChild(b); scroll(); }
+function addUser(t){ const b=document.createElement('div'); b.className='bubble user'; b.textContent=t; msgs.appendChild(b); scroll(); if(!chipsPinned) setChipsOpen(false); }
 function addBot(html){ const b=document.createElement('div'); b.className='bubble bot'; b.innerHTML=html; msgs.appendChild(b); scroll(); }
 function typing(){ const t=document.createElement('div'); t.className='typing'; t.innerHTML='<i></i><i></i><i></i>'; msgs.appendChild(t); scroll(); return t; }
 function listeningBubble(){ const b=document.createElement('div'); b.className='listenrow'; b.innerHTML='<span class="lmic">🎤</span><span class="wave"><i></i><i></i><i></i><i></i></span><span class="ltxt">聆听中…请说出指令</span>'; msgs.appendChild(b); scroll(); return b; }

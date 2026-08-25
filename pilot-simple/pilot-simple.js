@@ -339,6 +339,7 @@ function triggerAlarm(){
   clearResumeCd();
   if(running){ running.silent=true; abortAI('告警处置抢占'); }
   setSource('pause');
+  document.body.classList.add('oplocked');   // 从航线暂停起锁操控，直到弹窗三选一
   toast('检测到车辆违停，已自动暂停航线并悬停');
   const m=$('#alarmModal'); m.classList.add('open');
   let left=30; const ring=$('#amRing'); ring.textContent=left;
@@ -349,7 +350,7 @@ function closeAlarm(){ clearInterval(alarmTimer); $('#alarmModal').classList.rem
 
 /* 2a) 暂不处理 / 超时失效 → 恢复航线，实况智能体无任何处置内容 */
 function ignoreAlarm(expired){
-  closeAlarm(); setSource('auto');
+  closeAlarm(); document.body.classList.remove('oplocked'); setSource('auto');
   toast(expired?'30 秒未选择，已按不处置恢复航线':'已选择暂不处理，航线已恢复');
 }
 /* 2b) 人工接管处置 → 打开手动面板 + 飞行控制权，航线保持暂停，不出现 AI 处置内容
@@ -358,6 +359,7 @@ function manualDispose(){ closeAlarm(); enterManualDispose(false); }
 
 function enterManualDispose(fromAI){
   mdisposing=true;
+  document.body.classList.remove('oplocked');   // 人工处置不锁操控
   document.body.classList.add('mdispose');
   setSource('mdispose');
   manual.classList.add('open'); $('#openManual').classList.add('on');

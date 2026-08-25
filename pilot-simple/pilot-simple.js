@@ -11,7 +11,7 @@ let cur='auto';          // 控制源：auto / ai / manual / dispose
 let running=null;        // 正在执行的 AI 操控序列
 let disposing=false;     // 是否处于 AI 智能处置中（处置期间操控被锁定）
 let mdisposing=false;    // 是否处于人工处置中（处置未收口，操控可用但不自动恢复航线）
-let dispTimer=null, alarmTimer=null, disposeCard=null;
+let alarmTimer=null, disposeCard=null;
 let preemptedLabel=null; // 被告警抢占中止的操控指令名，用于处置收口后提示可重下
 const PLACEHOLDER='下达飞行 / 云台指令（可组合）…';
 const PLATE='粤B·D7F92';   // 演示：AI 处置取证识别到的车牌
@@ -279,10 +279,10 @@ function abortAI(reason){
 }
 
 /* 恢复航线：手动按钮（终止 / 接管后）—— 不倒计时、不自动 */
-function returnWaylineBubble(prefix){
+function returnWaylineBubble(prefix, tip){
   clearResumeCd();
   const b=document.createElement('div'); b.className='bubble bot';
-  b.innerHTML=(prefix?prefix+'<br>':'')+'需要继续巡检可恢复航线。<br><button class="retway">↩ 恢复航线</button>';
+  b.innerHTML=(prefix?prefix+'<br>':'')+(tip||'需要继续巡检可恢复航线。')+'<br><button class="retway">↩ 恢复航线</button>';
   msgs.appendChild(b); scroll();
   const btn=b.querySelector('.retway');
   btn.onclick=()=>{ btn.disabled=true; btn.textContent='✓ 已恢复航线'; resumeWayline(false); };
@@ -343,6 +343,7 @@ function addRiverRecord(){
 /* 1) 告警触发：自动暂停航线，弹出待处置弹窗 + 30s 倒计时 */
 function triggerAlarm(){
   if(disposing) return;
+  dispRunId++;                    // 让上一轮处置的收尾动画立即失效
   clearResumeCd();
   /* 抢占正在执行的 AI 操控：静默中止序列，改由抢占提示统一说明 */
   const preempted = running ? (running.label || '当前操控') : null;
@@ -404,77 +405,137 @@ function finishManualDispose(){
   resumeWayline(false);
 }
 
-/* 2c) AI 智能处置 → 实况智能体进入处置模式：输入区隐藏、底部两按钮常驻 */
-function enterDisposal(){
+/* 2c) AI 智能处置：过程与文案沿用智能处置原型
+   分析加载 → 说明可随时接管 → 实时状态行（追踪 / 取证 / 识别）→ 取证结论卡 → 两段式恢复航线 */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let dispRunId=0, dispRunEl=null;
+const staleDisp=my=>my!==dispRunId;
+
+function addPhase(t){ const p=document.createElement('div'); p.className='phase'; p.textContent=t; msgs.appendChild(p); scroll(); return p; }
+function setRun(el, html){ el.innerHTML='<span class="rtxt">'+html+'</span>'; scroll(); }
+function shutter(){ const f=$('#shutter'); f.classList.remove('fire'); void f.offsetWidth; f.classList.add('fire'); }
+function evidenceHTML(){
+  return '<div class="evidence"><div class="rear"><div class="glass"></div><div class="lamp l"></div><div class="lamp r"></div>'
+    +'<div class="plate">'+PLATE+'</div><i class="frame"><span class="lb">车牌 '+PLATE+'</span></i></div>'
+    +'<span class="stamp">'+nowTime()+' · 6.0x</span></div>';
+}
+function disposeSceneReset(){
+  st.zoom=1.0; $('#mZoom').value=10; applyScene(); refreshHud();
+  document.querySelector('.cross').classList.remove('on-target');
+  document.body.classList.remove('zoomed');
+}
+
+async function enterDisposal(){
   if(disposing) return;
   closeAlarm();
   if(running){ running.silent=true; abortAI('告警处置抢占'); }
   stopRec(false);                  // 处置接管后输入区隐藏，进行中的语音一并丢弃
   mdisposing=false; document.body.classList.remove('mdispose');   // AI 处置抢占人工处置
-  disposing=true;
+  disposing=true; const my=++dispRunId;
   openPanel();
   document.body.classList.add('oplocked');
   document.body.classList.add('disposing');
   manual.classList.remove('open'); $('#openManual').classList.remove('on');
   setSource('dispose');
-  const c=document.createElement('div'); c.className='dispcard'; disposeCard=c;
-  c.innerHTML=`
-    <div class="dt">🤖 处置智能体 · 已接管这条告警</div>
-    <div class="ds">遇到车辆违停，我会自己看画面决定怎么拍——<b>追踪目标 → 拍照取证 → 识别车牌</b>，拍清楚就自动收尾并恢复航线。<br>全程不用你操作；想自己飞或想停下，用下方按钮。</div>
-    <div class="rt" id="dispRt">🎯 正在追踪目标…</div>`;
-  msgs.appendChild(c); scroll();
   toast('已进入 AI 智能处置');
-  const steps=['🎯 正在追踪目标…','📷 正在拍照取证…','🔍 识别车牌中…'];
-  let k=0; clearInterval(dispTimer);
-  dispTimer=setInterval(()=>{
-    k++;
-    if(k<steps.length){ const rt=$('#dispRt'); if(rt) rt.textContent=steps[k]; }
-    else { clearInterval(dispTimer); if(disposing) exitDisposal('done', disposeCard); }
-  }, 2600);
-}
-function exitDisposal(mode, card){
-  if(!disposing) return;
-  disposing=false; clearInterval(dispTimer);
-  document.body.classList.remove('oplocked');
-  document.body.classList.remove('disposing');
-  const dt=card&&card.querySelector('.dt'), ds=card&&card.querySelector('.ds'), rt=card&&card.querySelector('#dispRt');
-  if(rt) rt.remove();
-  if(mode==='manual'){
-    /* 处置就此结束，转普通手动操控（不进人工处置态）；航线保持暂停，由用户点【返回航线】 */
-    if(dt) dt.innerHTML='✅ 已结束处置 · 转人工接管';
-    if(ds) ds.innerHTML='处置已结束，设备控制权交给你；航线保持暂停，飞完点【返回航线】继续任务。';
-    manual.classList.add('open'); $('#openManual').classList.add('on');
-    flightAuth.checked=true; updateFlightLock();
-    setSource('manual');
-    addBot('已<b>结束处置并人工接管</b>，处置就此结束。已开启飞行控制权，航线保持暂停，飞完点【返回航线】继续任务。');
-    returnWaylineBubble();
-    toast('处置已结束，转手动操控');
-  } else if(mode==='done'){
-    setSource('auto');
-    if(dt) dt.innerHTML='✅ 车牌已拍清楚 · 取证完成';
-    if(ds) ds.innerHTML='已锁定违停车辆并拍清车尾，车牌识别成功、取证归档完成；航线已恢复，任务继续飞行。';
-    if(card){
-      const pl=document.createElement('div'); pl.className='plateline';
-      pl.innerHTML='<span class="pv">'+PLATE+'</span><span class="pb">✓ 车牌识别成功</span>';
-      card.appendChild(pl);
-      const ph=document.createElement('div'); ph.className='evphoto';
-      ph.innerHTML='📷 取证照 · 变焦 6.0x<span class="abox"></span>';
-      card.appendChild(ph);
-      scroll();
-    }
-    addDispRecord(true);
-    addBot('✅ 取证完成，车牌 <b>'+PLATE+'</b> 识别成功，已归档；航线已恢复，任务继续飞行。');
-    toast('取证完成 · 车牌 '+PLATE);
-  } else {
-    setSource('auto');
-    if(dt) dt.innerHTML='✅ 已终止 AI 处置';
-    if(ds) ds.innerHTML='已终止 AI 处置，航线已恢复，任务继续飞行。';
-    addBot('✅ 已终止 AI 处置，航线已恢复，任务继续飞行。');
-    toast('处置结束，航线已恢复');
+
+  addBot('🔒 <b>已接管这条告警</b>，智能处置中…');
+  const t=typing(); await sleep(900); t.remove(); if(staleDisp(my)) return;
+
+  /* 阶段一：分析（只给加载过程，不出结论卡） */
+  addPhase('执行过程信息');
+  const an=document.createElement('div'); an.className='analyzing';
+  an.innerHTML='<div class="ahd"><span class="spin"></span><span class="atxt">正在读取告警帧…</span></div><div class="abar"><i></i></div>';
+  msgs.appendChild(an); scroll();
+  for(const s of ['正在读取告警帧…','正在锁定违停车辆…','正在判断取证方式…']){
+    an.querySelector('.atxt').textContent=s;
+    await sleep(1100); if(staleDisp(my)){ an.remove(); return; }
   }
+  an.remove();
+
+  /* 阶段二：执行（不逐条展示动作，只报当前在做什么） */
+  addBot('我将<b>根据画面理解智能处置</b>。<br>若您想人工接管可点击【<b>结束处置并人工接管</b>】，若您想结束处置可点击【<b>结束处置并恢复航线</b>】。');
+  await sleep(800); if(staleDisp(my)) return;
+
+  const run=document.createElement('div'); run.className='closing running';
+  msgs.appendChild(run); dispRunEl=run;
+  setRun(run,'🎯 正在追踪目标…');
+  st.zoom=2.2; $('#mZoom').value=22; applyScene(); refreshHud();
+  await sleep(2200); if(staleDisp(my)) return;
+  document.querySelector('.cross').classList.add('on-target');
+  await sleep(1600); if(staleDisp(my)) return;
+  st.zoom=6.0; $('#mZoom').value=60; applyScene(); refreshHud();
+  document.body.classList.add('zoomed');
+  await sleep(1900); if(staleDisp(my)) return;
+
+  setRun(run,'📷 正在拍照取证…');
+  shutter();
+  await sleep(1800); if(staleDisp(my)) return;
+  setRun(run,'🔍 识别车牌中…');
+  await sleep(1800); if(staleDisp(my)) return;
+  run.remove(); dispRunEl=null;
+
+  /* 收口：取证结论 */
+  disposing=false; document.body.classList.remove('disposing');
+  addPhase('处置结论');
+  addBot('✅ <b>车牌已拍清楚，取证完成</b>。');
+  const c=document.createElement('div'); c.className='card'; disposeCard=c;
+  c.innerHTML='<div class="ch">取证完成<span class="tag">AI 智能处置</span></div>'+evidenceHTML()
+    +'<div class="plateline"><span class="pv">'+PLATE+'</span><span class="badge">车牌识别成功</span></div>';
+  msgs.appendChild(c); scroll();
+  addDispRecord(true);
+  await sleep(900); if(staleDisp(my)) return;
+  await closeAndResume(my, false);
+}
+
+/* 恢复航线：先给「正在恢复」，落地后改为「航线已恢复」 */
+async function closeAndResume(my, aborted){
+  const box=document.createElement('div'); box.className='closing'+(aborted?' stop':'');
+  box.innerHTML='🔄 正在恢复航线....';
+  msgs.appendChild(box); scroll();
+  await sleep(1600); if(staleDisp(my)) return;
+
+  document.body.classList.remove('oplocked');
+  disposeSceneReset();
+  setSource('auto');
+  await sleep(1400); if(staleDisp(my)) return;
+
+  box.innerHTML='▶ <b>航线已恢复</b>，任务继续飞行。您可关闭对话框。';
+  scroll();
+  toast(aborted?'已终止 AI 处置，航线已恢复':'处置完成，航线已自动恢复');
   if(preemptedLabel){                    // 处置收口，抢占前被中止的操控可重下
     addBot('操控入口已恢复。刚才被打断的「'+preemptedLabel+'」需要继续的话，再说一次即可。');
     preemptedLabel=null;
+  }
+}
+
+/* 处置中的两个收口按钮 */
+function stopDisposal(mode){
+  if(!disposing) return;
+  const my=++dispRunId;                    // 递增令牌，正在跑的处置流程随即自行终止
+  disposing=false; document.body.classList.remove('disposing');
+  if(dispRunEl){
+    dispRunEl.classList.remove('running');
+    dispRunEl.innerHTML = mode==='manual' ? '🛑 AI 处置已终止，转人工接管' : '🛑 处置已终止';
+    dispRunEl=null;
+  }
+  addBot('🛑 已终止 AI 处置。');
+  if(mode==='manual'){
+    /* 处置就此结束，转普通手动操控（不进人工处置态）；航线保持暂停，由用户点【返回航线】 */
+    document.body.classList.remove('oplocked');
+    disposeSceneReset();
+    manual.classList.add('open'); $('#openManual').classList.add('on');
+    flightAuth.checked=true; updateFlightLock();
+    setSource('manual');
+    returnWaylineBubble('🕹 已取得设备控制权，<b>由你手动操作</b>。', '处置完成后请点击【<b>恢复航线</b>】。');
+    toast('已终止 AI 处置，控制权已交给你');
+    if(preemptedLabel){
+      addBot('刚才被打断的「'+preemptedLabel+'」需要继续的话，再说一次即可。');
+      preemptedLabel=null;
+    }
+  } else {
+    toast('已终止 AI 处置，正在恢复航线');
+    closeAndResume(my, true);
   }
 }
 /* 左侧「发现车辆违停」告警图片下方追加处置记录 */
@@ -493,8 +554,8 @@ $('#btnDemoDisp').onclick=triggerAlarm;
 $('#amIgnore').onclick=()=>ignoreAlarm(false);
 $('#amManual').onclick=manualDispose;
 $('#amAI').onclick=enterDisposal;
-$('#dispResume').onclick=()=>{ if(disposing) exitDisposal('resume', disposeCard); };
-$('#dispTakeover').onclick=()=>{ if(disposing) exitDisposal('manual', disposeCard); };
+$('#dispResume').onclick=()=>stopDisposal('resume');
+$('#dispTakeover').onclick=()=>stopDisposal('manual');
 $('#mdispDone').onclick=finishManualDispose;
 
 /* ============ 手动接管 ============ */

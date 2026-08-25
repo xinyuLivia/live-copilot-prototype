@@ -201,9 +201,10 @@
   .cdtip{ font-size:12.5px; color:var(--sub); }
   .cdtip b{ color:#ffd591; font-family:monospace; }
 
-  .actflash{ position:absolute; left:50%; top:44%; transform:translate(-50%,-50%) scale(.8); z-index:8; opacity:0; transition:.2s;
-    background:rgba(47,123,255,.9); color:#fff; font-size:14px; padding:8px 16px; border-radius:10px; box-shadow:0 6px 20px rgba(47,123,255,.5); pointer-events:none; }
-  .actflash.on{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  /* 执行过程提示：贴画面头部，位于控制源徽标下方，不遮挡主画面 */
+  .actflash{ position:absolute; left:50%; top:50px; transform:translate(-50%,-6px); z-index:8; opacity:0; transition:.2s;
+    background:rgba(47,123,255,.9); color:#fff; font-size:13px; padding:6px 14px; border-radius:9px; box-shadow:0 4px 16px rgba(47,123,255,.45); pointer-events:none; white-space:nowrap; }
+  .actflash.on{ opacity:1; transform:translate(-50%,0); }
 
   /* 底部工具栏（对齐真实实况：画面布局切换 + 操控入口） */
   .bottom{ position:absolute; left:244px; right:0; bottom:0; height:54px; background:var(--panel); border-top:1px solid var(--line); display:flex; align-items:center; justify-content:center; gap:16px; }

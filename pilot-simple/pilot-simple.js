@@ -1,6 +1,6 @@
 /* 实况智能体（Live Copilot）· 智能操控简版
    交互主线：下达指令 → 立即暂停航线并悬停 → 拆解动作并执行 → 完成后 5 秒倒计时恢复航线（可手动立即恢复）
-   高阶能力：支线任务「巡检河岸并录像」——识别河岸 → 云台对准（占画面约 75%）→ 沿河堤 20 m 录像 → 回主航线 */
+   高阶能力：支线任务「巡检河岸并录像」——识别河岸 → 云台对准（占画面约 75%）→ 沿河堤逐点录像 → 回主航线 */
 const $ = s => document.querySelector(s);
 const fab=$('#fab'), panel=$('#panel'), msgs=$('#msgs'), input=$('#input'), chips=$('#chips'),
       vscene=$('#vscene'), actflash=$('#actflash'), manual=$('#manual');
@@ -100,7 +100,7 @@ function riverTask(){
     {kind:'river_scan',   ico:'🛰', title:'识别河岸',      param:'从画面识别河岸走向与方位', dur:2200},
     {kind:'river_gimbal', ico:'🎯', title:'云台对准河岸',  param:'云台 → -35°，河岸占画面 75%', dur:2200},
     {kind:'rec_start',    ico:'⏺', title:'开始录像',      param:'支线任务全程录像', dur:1500},
-    {kind:'river_fly',    ico:'🛶', title:'沿河堤巡检',    param:'沿河堤飞行 20 m，云台动态跟随', n:20, dur:5200},
+    {kind:'river_fly',    ico:'🛶', title:'沿河堤巡检',    param:'沿河堤逐点飞行，云台动态跟随', dur:5200},
     {kind:'rec_stop',     ico:'⏹', title:'结束录像',      param:'录像归档，主航线未改动', dur:1500}
   ]};
 }
@@ -170,7 +170,7 @@ function applyAction(kind,n){
     case 'river_scan':   flash('🛰 已识别河岸走向'); break;
     case 'river_gimbal': st.gimbal=-35; applyScene(); document.body.classList.add('river-focus'); flash('🎯 云台对准河岸 · 占画面 78%'); break;
     case 'rec_start':    document.body.classList.add('recording'); flash('⏺ 开始录像'); break;
-    case 'river_fly':    flash('🛶 沿河堤飞行 '+n+' m'); boost(5000); break;
+    case 'river_fly':    flash('🛶 沿河堤逐点飞行'); boost(5000); break;
     case 'rec_stop':     document.body.classList.remove('recording'); flash('⏹ 录像已归档'); break;
   }
   refreshHud();
@@ -231,7 +231,7 @@ function aiRun(parsed){
     const wasSubtask=running.subtask;
     running=null;
     if(wasSubtask){
-      addBot('✅ 支线任务完成：沿河堤巡检 <b>20 m</b>，全程录像已归档，河岸平均占画面 <b>78%</b>（目标 75%）。主巡检航线未改动。<span class="tm"> · '+nowTime()+'</span>');
+      addBot('✅ 支线任务完成：<b>沿河堤巡检</b>，全程录像已归档，河岸平均占画面 <b>78%</b>（目标 75%）。主巡检航线未改动。<span class="tm"> · '+nowTime()+'</span>');
       addRiverRecord();
     } else {
       addBot('✅ 已完成：<b>'+parsed.label+'</b><span class="tm"> · '+nowTime()+'</span>');
@@ -303,7 +303,7 @@ function addRiverRecord(){
   const list=$('#evlist'); if(!list) return;
   const ev=document.createElement('div'); ev.className='ev';
   ev.innerHTML='<div class="evh"><span class="dot"></span>支线任务<span class="evr">巡检完成</span></div>'
-    +'<div class="evsub">河岸巡检并录像 · 沿河堤 20 m</div>'
+    +'<div class="evsub">河岸巡检并录像 · 沿河堤逐点飞行</div>'
     +'<div class="evthumb rvthumb">🛶<span class="rvtag">● 录像 00:12</span></div>'
     +'<div class="disp"><div class="dh">✅ 支线完成 · 河岸占画面 <b>78%</b> · 主航线未改动</div></div>';
   list.appendChild(ev); list.scrollTop=list.scrollHeight;

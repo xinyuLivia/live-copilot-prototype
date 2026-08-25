@@ -353,11 +353,11 @@ function ignoreAlarm(expired){
   closeAlarm(); document.body.classList.remove('oplocked'); setSource('auto');
   toast(expired?'30 秒未选择，已按不处置恢复航线':'已选择暂不处理，航线已恢复');
 }
-/* 2b) 人工接管处置 → 打开手动面板 + 飞行控制权，航线保持暂停，不出现 AI 处置内容
+/* 2b) 人工接管处置（只从待处置弹窗进入）→ 打开手动面板 + 飞行控制权，航线保持暂停，不出现 AI 处置内容
    处置未收口前航线不恢复：底部常驻【完成处置并恢复航线】，期间也可给智能体下指令代飞（P1） */
-function manualDispose(){ closeAlarm(); enterManualDispose(false); }
+function manualDispose(){ closeAlarm(); enterManualDispose(); }
 
-function enterManualDispose(fromAI){
+function enterManualDispose(){
   mdisposing=true;
   document.body.classList.remove('oplocked');   // 人工处置不锁操控
   document.body.classList.add('mdispose');
@@ -365,9 +365,9 @@ function enterManualDispose(fromAI){
   manual.classList.add('open'); $('#openManual').classList.add('on');
   flightAuth.checked=true; updateFlightLock();
   openPanel();
-  addBot((fromAI?'已终止 AI 处置，转<b>人工处置</b>。':'已<b>人工接管处置</b>。')
-    +'航线保持暂停、无人机悬停，已开启飞行控制权。<br>可用手动面板飞控，也可直接给我下指令代飞；取证完成后点下方【完成处置并恢复航线】。');
-  toast(fromAI?'已转人工处置，航线保持暂停':'已人工接管处置，航线保持暂停');
+  addBot('已<b>人工接管处置</b>。航线保持暂停、无人机悬停，已开启飞行控制权。'
+    +'<br>可用手动面板飞控，也可直接给我下指令代飞；取证完成后点下方【完成处置并恢复航线】。');
+  toast('已人工接管处置，航线保持暂停');
 }
 
 /* 人工处置收口：唯一出口是底部按钮，收口后才恢复航线 */
@@ -418,9 +418,15 @@ function exitDisposal(mode, card){
   const dt=card&&card.querySelector('.dt'), ds=card&&card.querySelector('.ds'), rt=card&&card.querySelector('#dispRt');
   if(rt) rt.remove();
   if(mode==='manual'){
-    if(dt) dt.innerHTML='✅ 已终止 AI 处置 · 转人工处置';
-    if(ds) ds.innerHTML='已取得设备控制权，航线保持暂停；取证完成后点底部【完成处置并恢复航线】收口。';
-    enterManualDispose(true);
+    /* 处置就此结束，转普通手动操控（不进人工处置态）；航线保持暂停，由用户点【返回航线】 */
+    if(dt) dt.innerHTML='✅ 已结束处置 · 转人工接管';
+    if(ds) ds.innerHTML='处置已结束，设备控制权交给你；航线保持暂停，飞完点【返回航线】继续任务。';
+    manual.classList.add('open'); $('#openManual').classList.add('on');
+    flightAuth.checked=true; updateFlightLock();
+    setSource('manual');
+    addBot('已<b>结束处置并人工接管</b>，处置就此结束。已开启飞行控制权，航线保持暂停，飞完点【返回航线】继续任务。');
+    returnWaylineBubble();
+    toast('处置已结束，转手动操控');
   } else if(mode==='done'){
     setSource('auto');
     if(dt) dt.innerHTML='✅ 车牌已拍清楚 · 取证完成';

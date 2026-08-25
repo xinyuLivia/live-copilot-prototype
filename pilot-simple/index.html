@@ -342,6 +342,11 @@
   .recbar.mute .rwave i{ background:rgba(245,158,11,.5); }
   .recbar.mute .rtime{ color:#ffd591; }
   .recbar.mute .rtxt{ color:#ffd591; }
+  /* 指令执行期间：一次只跑一条，输入框 / 发送 / 麦克风 / 快捷指令一并置灰 */
+  body.cmdrun .inputbar input,
+  body.cmdrun .inputbar .mic,
+  body.cmdrun .inputbar .send,
+  body.cmdrun .chipwrap{ opacity:.42; pointer-events:none; }
   /* 转写落入输入框后提示用户确认发送 */
   .inputbar .send.nudge{ animation:sendnudge 1s 3; }
   @keyframes sendnudge{ 50%{ box-shadow:0 0 0 7px rgba(47,123,255,.2); } }
@@ -514,6 +519,6 @@
   <div class="toast" id="toast"></div>
 </div>
 
-<script src="pilot-simple.js?v=20260825tone1"></script>
+<script src="pilot-simple.js?v=20260825lock1"></script>
 </body>
 </html>

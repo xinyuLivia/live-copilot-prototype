@@ -204,7 +204,15 @@ function cmdCardEl(parsed){
   c.querySelector('.abort').onclick=()=>abortAI('用户中止');
   return c;
 }
+/* 一次只跑一条指令：执行期间输入框 / 发送 / 快捷指令 / 麦克风全部置灰 */
+function setCmdLock(on){
+  document.body.classList.toggle('cmdrun', on);
+  input.disabled=on; $('#sendBtn').disabled=on;
+  input.placeholder = on ? '执行中… 要换指令请先点【终止】' : PLACEHOLDER;
+}
+
 function aiRun(parsed){
+  setCmdLock(true);
   addBot(parsed.compound ? ('好的，分 '+parsed.steps.length+' 步执行：') : '好的，正在执行：');
   const c=cmdCardEl(parsed); msgs.appendChild(c); scroll();
   const seqEls=c.querySelectorAll('.sq'), fill=c.querySelector('.runbar i');
@@ -227,7 +235,7 @@ function aiRun(parsed){
   function finish(){
     c.classList.add('done'); c.querySelector('.cs').textContent='AI 操控 · 已完成'; const ab=c.querySelector('.abort'); if(ab) ab.remove();
     const wasSubtask=running.subtask;
-    running=null;
+    running=null; setCmdLock(false);
     if(wasSubtask){
       addBot('✅ 支线任务完成：<b>沿河堤巡检</b>，全程录像已归档，河岸平均占画面 <b>78%</b>（目标 75%）。主巡检航线未改动。<span class="tm"> · '+nowTime()+'</span>');
       addRiverRecord();
@@ -259,7 +267,7 @@ function abortAI(reason){
   const silent=running.silent;
   running.aborted=true; running.timers.forEach(clearTimeout);
   const c=running.card; if(c){ c.classList.add('aborted'); const cs=c.querySelector('.cs'); if(cs) cs.textContent='已终止操控'; const ab=c.querySelector('.abort'); if(ab) ab.remove(); }
-  running=null;
+  running=null; setCmdLock(false);
   if(silent) return;                       // 被处置等外部流程抢占时，不重复提示
   applyAction('hover');
   addBot('■ 已终止（'+reason+'），无人机<b>原地悬停</b>。');
@@ -511,6 +519,7 @@ $('#mZoom').addEventListener('input',e=>{ st.zoom=(+e.target.value)/10; applySce
 /* ============ 发送 ============ */
 function send(){
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
+  if(running){ toast('上一条指令还在执行，先点【终止】'); return; }
   const q=input.value.trim(); if(!q) return;
   clearResumeCd();                 // 下达新指令即取消未完成的恢复航线倒计时
   if(!panel.classList.contains('open')) openPanel();
@@ -542,6 +551,7 @@ let rec=null;
 function startRec(mute){
   if(rec) return;
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
+  if(running){ toast('上一条指令还在执行，先点【终止】'); return; }
   inputbar.classList.add('recording');
   recbar.classList.toggle('mute', !!mute);
   recTxt.className='rtxt partial';

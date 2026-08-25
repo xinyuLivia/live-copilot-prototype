@@ -3,6 +3,6 @@
 set -e
 cd "$(dirname "$0")/.."
 git add -A
-git commit -m "兜底文案与 PRD 异常话术对齐"
+git commit -m "语音触发规则修正：麦克风随抽屉出现，去掉自动开抽屉"
 git push
 git log --oneline -1

@@ -534,7 +534,6 @@ let rec=null;
 function startRec(mute){
   if(rec) return;
   if(disposing){ toast('处置进行中，操控暂不可用'); return; }
-  if(!panel.classList.contains('open')) openPanel();
   inputbar.classList.add('recording');
   recbar.classList.toggle('mute', !!mute);
   recTxt.className='rtxt partial';

@@ -51,6 +51,17 @@
                      border:1px solid rgba(34,197,94,.45); background:rgba(34,197,94,.14); color:#a7f3c0; }
   .mdispfoot button:hover{ background:rgba(34,197,94,.22); color:#fff; }
   .mdispfoot .mfhint{ font-size:11px; color:var(--sub); margin-top:7px; line-height:1.5; }
+  /* 人工处置：抽屉未打开时，收口按钮常驻画面底部 */
+  .mdispbar{ display:none; position:absolute; right:16px; bottom:138px; z-index:26;
+    flex-direction:column; align-items:stretch; gap:8px; padding:10px 12px; border-radius:12px; max-width:280px;
+    background:rgba(20,26,36,.92); border:1px solid rgba(34,197,94,.4); box-shadow:0 10px 28px rgba(0,0,0,.5); }
+  body.mdispose:not(.drawer-open) .mdispbar{ display:flex; }
+  .mdispbar .mbtxt{ font-size:11.5px; color:#cfd8e3; line-height:1.6; }
+  .mdispbar .mbtxt b{ color:#a7f3c0; }
+  .mdispbar button{ font-size:12.5px; padding:8px 14px; border-radius:8px; cursor:pointer; white-space:nowrap;
+    border:1px solid rgba(34,197,94,.45); background:rgba(34,197,94,.16); color:#a7f3c0; }
+  .mdispbar button:hover{ background:rgba(34,197,94,.26); color:#fff; }
+
   /* 待处置弹窗 */
   .alarmmodal{ position:absolute; top:52px; right:14px; z-index:70; display:none; }
   .alarmmodal.open{ display:block; }
@@ -485,6 +496,10 @@
     </div>
     <div class="actflash" id="actflash"></div>
     <div class="shutter" id="shutter"></div>
+    <div class="mdispbar" id="mdispBar">
+      <span class="mbtxt"><b>人工处置中</b> · 航线保持暂停，可手动飞控或呼出智能体代飞</span>
+      <button id="mdispDoneBar">✅ 完成处置并恢复航线</button>
+    </div>
   </div>
 
   <!-- 底部工具栏 -->
@@ -596,6 +611,6 @@
   <div class="toast" id="toast"></div>
 </div>
 
-<script src="pilot-simple.js?v=20260826pf1"></script>
+<script src="pilot-simple.js?v=20260826md2"></script>
 </body>
 </html>

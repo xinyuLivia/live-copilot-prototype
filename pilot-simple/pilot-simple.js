@@ -402,9 +402,9 @@ function enterManualDispose(){
   setSource('mdispose');
   manual.classList.add('open'); $('#openManual').classList.add('on');
   flightAuth.checked=true; updateFlightLock();
-  openPanel();
+  /* 人工处置以飞手手动飞控为主，不主动打开智能体抽屉；需要代飞时用户自己点悬浮球 */
   addBot('已<b>人工接管处置</b>。航线保持暂停、无人机悬停，已开启飞行控制权。'
-    +'<br>可用手动面板飞控，也可直接给我下指令代飞；取证完成后点下方【完成处置并恢复航线】。'
+    +'<br>可用手动面板飞控，也可直接给我下指令代飞；取证完成后点【完成处置并恢复航线】。'
     +(preemptedLabel?'<br>刚才被打断的「'+preemptedLabel+'」需要继续的话，再说一次即可。':''));
   preemptedLabel=null;
   toast('已人工接管处置，航线保持暂停');
@@ -638,6 +638,7 @@ $('#amAI').onclick=enterDisposal;
 $('#dispResume').onclick=()=>stopDisposal('resume');
 $('#dispTakeover').onclick=()=>stopDisposal('manual');
 $('#mdispDone').onclick=finishManualDispose;
+$('#mdispDoneBar').onclick=finishManualDispose;   // 抽屉未打开时的画面级收口入口
 
 /* ============ 手动接管 ============ */
 function takeover(){

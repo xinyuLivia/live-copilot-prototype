@@ -13,6 +13,7 @@ let disposing=false;     // 是否处于 AI 智能处置中（处置期间操控
 let mdisposing=false;    // 是否处于人工处置中（处置未收口，操控可用但不自动恢复航线）
 let alarmTimer=null, disposeCard=null;
 let preemptedLabel=null; // 被告警抢占中止的操控指令名，用于处置收口后提示可重下
+let pointfly=false;      // 是否处于指点飞行任务（到点悬停后才开放操控，且无航线可恢复）
 const PLACEHOLDER='下达飞行 / 云台指令（可组合）…';
 const PLATE='粤B·D7F92';   // 演示：AI 处置取证识别到的车牌
 
@@ -22,7 +23,8 @@ function setSource(s){
   /* 徽标文案以 PRD「控制权模型」表为准 */
   const map={auto:['航线任务执行中','src-auto'], ai:['AI 操控中','src-ai'], manual:['手动操控中','src-manual'],
              dispose:['AI 处置中','src-dispose'], pause:['航线已暂停 · 待处置','src-dispose'],
-             mdispose:['人工处置-手动操控中','src-mdispose'], mdisposeAI:['人工处置-AI 操控中','src-mdispose']};
+             mdispose:['人工处置-手动操控中','src-mdispose'], mdisposeAI:['人工处置-AI 操控中','src-mdispose'],
+             pf:['指点飞行任务执行中','src-pf'], pfhover:['指点飞行 · 到点悬停','src-pfhover']};
   const b=$('#srcBadge'); b.textContent=map[s][0]; b.className='srcbadge '+map[s][1];
   document.body.classList.toggle('aictrl', s==='ai'||s==='mdisposeAI');   // AI 操控时锁定手动面板
 }
@@ -236,7 +238,8 @@ function aiRun(parsed){
     const wasSubtask=running.subtask;
     running=null; setCmdLock(false);
     if(wasSubtask){
-      addBot('✅ 支线任务完成：<b>沿河堤巡检</b>，全程录像已归档，河岸平均占画面 <b>78%</b>（目标 75%）。主巡检航线未改动。<span class="tm"> · '+nowTime()+'</span>');
+      addBot('✅ 支线任务完成：<b>沿河堤巡检</b>，全程录像已归档，河岸平均占画面 <b>78%</b>（目标 75%）。'
+        +(pointfly?'已飞回原目标点悬停。':'主巡检航线未改动。')+'<span class="tm"> · '+nowTime()+'</span>');
       addRiverRecord();
     } else {
       addBot('✅ 已完成：<b>'+parsed.label+'</b><span class="tm"> · '+nowTime()+'</span>');
@@ -244,6 +247,11 @@ function aiRun(parsed){
     if(mdisposing){          // 人工处置未收口：不倒计时、不自动恢复航线，等用户点收口按钮
       setSource('mdispose');
       addBot('人工处置尚未收口，<b>航线保持暂停</b>、无人机悬停。可继续下指令；取证完成后点下方【完成处置并恢复航线】。');
+      return;
+    }
+    if(pointfly){            // 指点飞行没有航线可恢复：保持悬停，不出【恢复航线】与 5 秒倒计时
+      setSource('pfhover');
+      addBot('无人机<b>保持在目标点悬停</b>，可继续下指令。<br>结束本次临时任务请用左侧【一键返航】。');
       return;
     }
     resumeCountdown('操控已完成，无人机悬停中。');
@@ -254,6 +262,9 @@ function aiRun(parsed){
   if(mdisposing){
     flash('🤖 处置中代飞 · 正在拆解动作');
     addBot('收到，处置期间由我代飞，正在拆解动作并执行…');
+  } else if(pointfly){
+    flash('🤖 到点悬停中 · 正在拆解动作');
+    addBot('收到，正在拆解动作并执行…（指点飞行任务无航线可暂停，直接在目标点执行）');
   } else {
     flash('⏸ 暂停航线并悬停');
     addBot('⏸ 已暂停航线并悬停，正在拆解动作并执行…');
@@ -273,6 +284,11 @@ function abortAI(reason){
   if(mdisposing){                          // 人工处置未收口：不给恢复航线入口，走底部收口按钮
     setSource('mdispose');
     addBot('人工处置仍在进行，航线保持暂停。取证完成后点下方【完成处置并恢复航线】。');
+    return;
+  }
+  if(pointfly){                            // 指点飞行：无航线可恢复，停在当前位置继续待命
+    setSource('pfhover');
+    addBot('无人机<b>原地悬停</b>，可继续下指令。结束本次临时任务请用左侧【一键返航】。');
     return;
   }
   returnWaylineBubble();                   // 主动终止不自动恢复，交给用户决定
@@ -343,6 +359,7 @@ function addRiverRecord(){
 /* 1) 告警触发：自动暂停航线，弹出待处置弹窗 + 30s 倒计时 */
 function triggerAlarm(){
   if(disposing) return;
+  if(pointfly){ toast('指点飞行演示中，告警处置请先结束本次临时任务'); return; }
   dispRunId++;                    // 让上一轮处置的收尾动画立即失效
   clearResumeCd();
   /* 抢占正在执行的 AI 操控：静默中止序列，改由抢占提示统一说明 */
@@ -550,6 +567,70 @@ function addDispRecord(ok){
     : '<div class="dh warn">⚠ AI 处置完成 · 未取到清晰车牌</div>';
   ev.appendChild(d);
 }
+/* ============ 指点飞行任务演示 ============
+   飞往目标点途中不提供智能体入口；到点悬停后才可下指令。
+   到点悬停下执行完成不出现【恢复航线】与 5 秒倒计时，无人机保持悬停。 */
+let pfTimer=null, pfTip=null;
+function setPfTip(txt){
+  if(!pfTip){ pfTip=document.createElement('div'); pfTip.className='pftip'; $('#videoArea').appendChild(pfTip); }
+  pfTip.textContent=txt;
+}
+function clearPfTip(){ if(pfTip){ pfTip.remove(); pfTip=null; } }
+function setTaskCard(nm, st1, st2){
+  $('#taskNm').textContent=nm+'…'; $('#taskNm2').textContent=nm;
+  $('#taskSt1').textContent=st1; $('#taskSt2').textContent=st2;
+}
+
+function startPointFly(){
+  if(pointfly || disposing || mdisposing) return;
+  if(running){ running.silent=true; abortAI('切换任务'); }
+  clearResumeCd(); closeAlarm();
+  pointfly=true;
+  document.body.classList.add('pf-flying');
+  closePanel();                                    // 途中没有入口：抽屉收起、悬浮球隐藏
+  msgs.querySelectorAll('.bubble,.cmdcard,.card,.phase,.closing,.analyzing,.typing').forEach(e=>e.remove());
+  manual.classList.remove('open'); $('#openManual').classList.remove('on');
+  flightAuth.checked=false; updateFlightLock();
+  setTaskCard('K12+300 临时指点飞行任务','飞往目标点…','到点悬停');
+  setSource('pf');
+  setPfTip('指点飞行任务 · 飞往目标点途中，暂不提供实况智能体入口');
+  toast('已切换为指点飞行任务，正在飞往目标点');
+  boost(6000);
+  clearTimeout(pfTimer);
+  pfTimer=setTimeout(pointFlyArrived, 6200);
+}
+function pointFlyArrived(){
+  if(!pointfly) return;
+  document.body.classList.remove('pf-flying');      // 到点悬停：入口出现
+  applyAction('hover');
+  setSource('pfhover');
+  setTaskCard('K12+300 临时指点飞行任务','已到达目标点 · 悬停中','到点悬停');
+  setPfTip('已到达目标点并悬停 · 可打开实况智能体下达操控指令');
+  toast('已到达目标点并悬停，实况智能体入口已开放');
+  addBot('已到达目标点并<b>悬停</b>。<br>本次是指点飞行任务，没有航线可暂停，你的指令我会直接在目标点执行；执行完成后无人机继续悬停，<b>不会出现【恢复航线】</b>。<br>结束本次临时任务请用左侧【一键返航】。');
+  fab.classList.add('pulse');
+  setTimeout(()=>fab.classList.remove('pulse'), 6000);
+}
+function endPointFly(silent){
+  if(!pointfly) return;
+  if(running){ running.silent=true; abortAI('结束指点飞行'); }
+  clearTimeout(pfTimer);
+  pointfly=false;
+  document.body.classList.remove('pf-flying');
+  clearPfTip();
+  setTaskCard('景区门口大道巡检任务2026','执行中…','返航');
+  setSource('auto');
+  if(!silent) toast('临时任务已结束，已回到航线巡检任务');
+}
+$('#btnDemoPF').onclick=()=>{ pointfly ? endPointFly() : startPointFly(); };
+$('#btnRtl').onclick=()=>{
+  if(!pointfly){ toast('演示中：一键返航为主任务级操作'); return; }
+  if(!confirm('返航则当前临时任务结束，确认返航？')) return;
+  addBot('已确认返航，<b>当前指点飞行任务结束</b>。');
+  endPointFly(true);
+  toast('已返航，临时任务结束');
+};
+
 $('#btnDemoDisp').onclick=triggerAlarm;
 $('#amIgnore').onclick=()=>ignoreAlarm(false);
 $('#amManual').onclick=manualDispose;
@@ -569,6 +650,11 @@ function takeover(){
   if(cur==='manual') return;
   clearResumeCd();
   if(running){ running.silent=true; abortAI('切换手动操控'); }
+  if(pointfly){                            // 指点飞行：手动飞完仍是悬停，无航线可恢复
+    setSource('manual'); toast('已切换为手动操控');
+    addBot('已切换为<b>手动操控</b>，无人机在目标点悬停。<br>本次是指点飞行任务，没有航线可恢复；结束临时任务请用左侧【一键返航】。');
+    return;
+  }
   setSource('manual'); toast('已切换为手动操控');
   returnWaylineBubble('已切换为手动操控，航线保持暂停。');
 }
@@ -608,7 +694,9 @@ function send(){
   setTimeout(()=>{
     t.remove();
     if(/急停|紧急|返航|降落|回家|回巢|回来|起飞|结束任务|终止任务|返回起飞点|结束巡检/.test(q)){
-      addBot('这类操作暂时还不支持。我能帮你控制飞行方向和距离、高度、机头朝向、云台角度、变焦镜头、拍照录像；<br>起飞、降落、返航、急停、结束任务会影响整个巡检任务，请在页面上操作。');
+      addBot('这类操作暂时还不支持。我能帮你控制飞行方向和距离、高度、机头朝向、云台角度、变焦镜头、拍照录像；<br>'
+        +(pointfly ? '起飞、降落、返航、急停、结束任务会影响整个指点飞行任务，请用左侧【一键返航】操作，返航后本次临时任务即结束。'
+                   : '起飞、降落、返航、急停、结束任务会影响整个巡检任务，请在页面上操作。'));
       return;
     }
     const parsed=parseCmd(q);

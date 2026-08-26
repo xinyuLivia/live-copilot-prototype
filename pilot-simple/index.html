@@ -145,6 +145,13 @@
   body.zoomed .detbox{ transform:translate(-50%,-50%) scale(1.85); border-color:#22c55e; box-shadow:0 0 14px rgba(34,197,94,.5); }
   body.zoomed .detbox span{ background:#22c55e; color:#06240f; }
 
+  /* 指点飞行：飞往目标点途中不提供智能体入口 */
+  .srcbadge.src-pf{ background:rgba(148,163,184,.16); border-color:rgba(148,163,184,.5); color:#cbd5e1; }
+  .srcbadge.src-pfhover{ background:rgba(56,189,248,.14); border-color:rgba(56,189,248,.5); color:#7dd3fc; }
+  body.pf-flying #fab{ display:none; }
+  .pftip{ position:absolute; left:50%; top:78px; transform:translateX(-50%); z-index:8; font-size:12px; color:#cbd5e1;
+    background:rgba(15,23,42,.82); border:1px solid rgba(148,163,184,.35); border-radius:16px; padding:5px 14px; white-space:nowrap; }
+
   /* 快门白闪 */
   .shutter{ position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:9; }
   .shutter.fire{ animation:shot .42s ease; }
@@ -325,6 +332,8 @@
   .fab .ripple{ position:absolute; inset:0; border-radius:50%; border:2px solid #5b9bff; animation:ripple 2s infinite; }
   @keyframes ripple{ 0%{transform:scale(1);opacity:.6;} 100%{transform:scale(1.7);opacity:0;} }
   .fab.hidden{ opacity:0; pointer-events:none; transform:scale(.6); }
+  .fab.pulse{ animation:fabpulse 1.4s ease-in-out infinite; }
+  @keyframes fabpulse{ 50%{ box-shadow:0 6px 20px rgba(47,123,255,.45), 0 0 0 12px rgba(47,123,255,.18); } }
 
   /* 对话面板 */
   .panel{ position:absolute; right:0; top:0; bottom:0; width:390px; z-index:40; background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; transform:translateX(100%); transition:transform .28s ease; box-shadow:-8px 0 30px rgba(0,0,0,.4); }
@@ -424,6 +433,7 @@
   <span class="crumb">项目首页</span><span class="sep">/</span>
   <span class="crumb active">任务实况</span>
   <span class="spacer"></span>
+  <span class="demo" id="btnDemoPF" title="模拟指点飞行任务：飞往目标点途中无智能体入口，到点悬停后才可操控">📍 模拟指点飞行</span>
   <span class="demo" id="btnDemoDisp" title="模拟告警 → 自动暂停航线 → 待处置弹窗（暂不处理 / 人工接管 / AI 智能处置）">⚠ 模拟告警</span>
   <span class="dot">✿</span>
 </div>
@@ -432,10 +442,10 @@
   <!-- 左侧：任务事件流 -->
   <div class="side">
     <div class="task">
-      <div class="th"><div class="nm">景区门口大道巡检任务2026…</div><button class="detail">任务详情</button></div>
-      <div class="titem">景区门口大道巡检任务2026 <span class="rt" id="taskRt">00:07:03</span></div>
-      <div class="strow"><span class="rd on"></span> 执行中…</div>
-      <div class="strow"><span class="rd"></span> 返航</div>
+      <div class="th"><div class="nm" id="taskNm">景区门口大道巡检任务2026…</div><button class="detail">任务详情</button></div>
+      <div class="titem"><span id="taskNm2">景区门口大道巡检任务2026</span> <span class="rt" id="taskRt">00:07:03</span></div>
+      <div class="strow"><span class="rd on"></span> <span id="taskSt1">执行中…</span></div>
+      <div class="strow"><span class="rd"></span> <span id="taskSt2">返航</span></div>
     </div>
     <div class="sech">任务的注意事项如下</div>
     <div class="evlist" id="evlist">
@@ -445,7 +455,7 @@
       <div class="ev"><div class="evh"><span class="dot"></span>检测过程<span class="evr">检测完成</span></div><div class="evsub">发现行人闯入</div><div class="evthumb">🛣️<span class="abox"></span></div></div>
       <div class="ev" id="evCar"><div class="evh"><span class="dot"></span>检测过程<span class="evr">检测完成</span></div><div class="evsub">发现车辆违停</div><div class="evthumb">🛣️<span class="abox" style="left:46%;top:40%;"></span></div></div>
     </div>
-    <div class="rtn"><button>⤶ 一键返航</button></div>
+    <div class="rtn"><button id="btnRtl">⤶ 一键返航</button></div>
   </div>
 
   <!-- 视频区 -->
@@ -586,6 +596,6 @@
   <div class="toast" id="toast"></div>
 </div>
 
-<script src="pilot-simple.js?v=20260826badge1"></script>
+<script src="pilot-simple.js?v=20260826pf1"></script>
 </body>
 </html>

@@ -23,7 +23,7 @@ function setSource(s){
   const map={auto:['航线任务执行中','src-auto'], ai:['AI 操控中','src-ai'], manual:['手动操控中','src-manual'],
              dispose:['AI 处置中','src-dispose'], pause:['航线已暂停 · 待处置','src-dispose'],
              mdispose:['人工处置-手动操控中','src-mdispose'], mdisposeAI:['人工处置-AI 操控中','src-mdispose']};
-  const b=$('#srcBadge'); b.textContent='控制源：'+map[s][0]; b.className='srcbadge '+map[s][1];
+  const b=$('#srcBadge'); b.textContent=map[s][0]; b.className='srcbadge '+map[s][1];
   document.body.classList.toggle('aictrl', s==='ai'||s==='mdisposeAI');   // AI 操控时锁定手动面板
 }
 

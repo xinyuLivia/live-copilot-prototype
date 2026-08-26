@@ -34,6 +34,7 @@ function openPanel(){ panel.classList.add('open'); document.body.classList.add('
 function closePanel(){ panel.classList.remove('open'); document.body.classList.remove('drawer-open'); fab.classList.remove('hidden'); }
 fab.onclick=openPanel; $('#closeBtn').onclick=closePanel;
 $('#openManual').onclick=()=>{ const on=manual.classList.toggle('open'); $('#openManual').classList.toggle('on',on); };
+$('#mCollapse').onclick=()=>{ const f=manual.classList.toggle('telfold'); $('#mCollapse').textContent=f?'‹':'›'; };
 $('#closeManual').onclick=()=>{ manual.classList.remove('open'); $('#openManual').classList.remove('on'); };
 document.querySelectorAll('.views .vw').forEach(v=>v.onclick=()=>{ document.querySelectorAll('.views .vw').forEach(x=>x.classList.remove('active')); v.classList.add('active'); toast('已切换画面布局：'+v.title); });
 
@@ -189,8 +190,17 @@ function clearRiverScene(){ document.body.classList.remove('river-focus','record
 
 /* HUD / 手动面板同步 */
 function refreshHud(){
-  $('#mGim').value=st.gimbal; $('#mGimVal').textContent=st.gimbal+'°';
-  $('#mZoom').value=Math.round(st.zoom*10); $('#mZoomVal').textContent=st.zoom.toFixed(1)+'x';
+  $('#mGimVal').textContent=st.gimbal+'°';
+  $('#mZoomVal').textContent=st.zoom.toFixed(1)+'X';
+  refreshTel();
+}
+/* 飞机参数：未取得飞行控制权时不回传，统一显示 -- */
+function refreshTel(){
+  const on=flightAuth && flightAuth.checked;
+  const v={ alt:st.alt.toFixed(1)+' m', asl:(st.alt+89.5).toFixed(1)+' m', bat:'78%', hdg:st.heading.toFixed(2)+'°',
+            vs:(st.spd?1.2:0).toFixed(1)+' m/s', hs:st.spd.toFixed(1)+' m/s', fly:'18 min', pit:st.gimbal+'°',
+            rh:'120 m', rd:'203.3 m', gps:'22.59,113.98', rol:'0.4°' };
+  document.querySelectorAll('#mtel [data-tel]').forEach(el=>{ el.textContent = on ? v[el.dataset.tel] : '--'; });
 }
 
 /* ============ AI 执行（无确认，直接跑；可中止） ============ */
@@ -437,7 +447,7 @@ function evidenceHTML(){
     +'<span class="stamp">'+nowTime()+' · 6.0x</span></div>';
 }
 function disposeSceneReset(){
-  st.zoom=1.0; $('#mZoom').value=10; applyScene(); refreshHud();
+  st.zoom=1.0; applyScene(); refreshHud();
   document.querySelector('.cross').classList.remove('on-target');
   document.body.classList.remove('zoomed');
 }
@@ -477,11 +487,11 @@ async function enterDisposal(){
   const run=document.createElement('div'); run.className='closing running';
   msgs.appendChild(run); dispRunEl=run;
   setRun(run,'🎯 正在追踪目标…');
-  st.zoom=2.2; $('#mZoom').value=22; applyScene(); refreshHud();
+  st.zoom=2.2; applyScene(); refreshHud();
   await sleep(2200); if(staleDisp(my)) return;
   document.querySelector('.cross').classList.add('on-target');
   await sleep(1600); if(staleDisp(my)) return;
-  st.zoom=6.0; $('#mZoom').value=60; applyScene(); refreshHud();
+  st.zoom=6.0; applyScene(); refreshHud();
   document.body.classList.add('zoomed');
   await sleep(1900); if(staleDisp(my)) return;
 
@@ -653,7 +663,11 @@ function takeover(){
 }
 /* 飞行控制权：开启后才能操控飞行盘；云台 / 变焦不受限 */
 const flightAuth=$('#flightAuth');
-function updateFlightLock(){ document.querySelectorAll('.pad.flightctl').forEach(p=>p.classList.toggle('locked', !flightAuth.checked)); }
+function updateFlightLock(){
+  document.querySelectorAll('.flightctl').forEach(p=>p.classList.toggle('locked', !flightAuth.checked));
+  manual.classList.toggle('authed', flightAuth.checked);   // 键盘飞行盘 / 返航 / 更快变焦仅在取得控制权后出现
+  refreshTel();
+}
 flightAuth.addEventListener('change',()=>{
   updateFlightLock();
   if(flightAuth.checked){ takeover(); toast('已开启飞行控制权（进入手动飞行模式）'); }
@@ -670,9 +684,34 @@ document.querySelectorAll('[data-m]').forEach(btn=>{
     btn.classList.add('lit'); setTimeout(()=>btn.classList.remove('lit'),300);
   });
 });
-/* 云台 / 变焦：叠加执行，不改变控制源、不需飞行控制权 */
-$('#mGim').addEventListener('input',e=>{ st.gimbal=+e.target.value; applyScene(); refreshHud(); flash('🎯 云台 '+st.gimbal+'°'); });
-$('#mZoom').addEventListener('input',e=>{ st.zoom=(+e.target.value)/10; applyScene(); refreshHud(); flash('🔎 变焦 '+st.zoom.toFixed(1)+'x'); });
+/* 悬停 / 返航：悬停不需要飞行控制权；返航属主任务级操作，二次确认 */
+$('#mHover').onclick=()=>{ applyAction('hover'); toast('已悬停'); };
+$('#mRtl').onclick=()=>{
+  if(!confirm('返航将结束当前任务，确认返航？')) return;
+  applyAction('rtl'); toast('已下发返航');
+};
+/* 速度档位 */
+let fastMode=true;
+$('#mSpd').onclick=()=>{ fastMode=!fastMode; $('#mSpd').textContent=fastMode?'高速[X]':'低速[X]'; toast('已切换'+(fastMode?'高速':'低速')+'档'); };
+
+/* 云台 / 镜头 / 变焦：叠加执行，不改变控制源、不需飞行控制权 */
+function gimStep(d){ st.gimbal=Math.max(-90,Math.min(30,st.gimbal+d)); applyScene(); refreshHud(); flash('🎯 云台 '+st.gimbal+'°'); }
+function zoomStep(d){ st.zoom=Math.max(1,Math.min(16,+(st.zoom+d).toFixed(1))); applyScene(); refreshHud(); flash('🔎 变焦 '+st.zoom.toFixed(1)+'x'); }
+$('#gU').onclick=()=>gimStep(10);
+$('#gD').onclick=()=>gimStep(-10);
+$('#gL').onclick=()=>flash('🎯 云台向左 10°');
+$('#gR').onclick=()=>flash('🎯 云台向右 10°');
+$('#gReset').onclick=()=>{ st.gimbal=0; st.zoom=1.0; applyScene(); refreshHud(); flash('🎯 云台已重置'); };
+$('#zOut').onclick=()=>zoomStep(-0.5);
+$('#zIn').onclick =()=>zoomStep(0.5);
+$('#zOutF').onclick=()=>zoomStep(-2);
+$('#zInF').onclick =()=>zoomStep(2);
+document.querySelectorAll('.lens').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.lens').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  document.body.classList.toggle('ir', b.dataset.lens==='红外镜头');
+  flash('📷 已切换'+b.dataset.lens);
+});
 
 /* ============ 发送 ============ */
 function send(){

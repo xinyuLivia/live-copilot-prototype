@@ -302,7 +302,7 @@
   .ctrlbtn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
 
   /* 手动操控面板（点“操控”打开；AI 执行时联动高亮） */
-  .manual{ position:absolute; left:50%; bottom:64px; transform:translate(-50%,20px); z-index:35; width:560px;
+  .manual{ position:absolute; left:50%; bottom:64px; transform:translate(-50%,20px); z-index:35; width:1010px; max-width:calc(100% - 32px);
     background:rgba(15,19,26,.97); border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:.25s; }
   .manual.open{ opacity:1; transform:translate(-50%,0); pointer-events:auto; }
   body.drawer-open .manual{ left:calc(50% - 195px); }
@@ -320,18 +320,68 @@
   .swt .track::before{ content:''; position:absolute; width:14px; height:14px; left:3px; top:2px; background:#9fb0c6; border-radius:50%; transition:.2s; }
   .swt input:checked + .track{ background:var(--accent); border-color:var(--accent); }
   .swt input:checked + .track::before{ transform:translateX(18px); background:#fff; }
-  .pad.flightctl.locked{ opacity:.4; pointer-events:none; }
-  .manual .mbody{ display:flex; align-items:center; justify-content:center; gap:22px; padding:16px; }
-  .pad{ display:grid; grid-template-columns:repeat(3,46px); grid-template-rows:repeat(3,46px); gap:5px; }
-  .pad button{ background:var(--panel2); border:1px solid var(--line); border-radius:8px; color:#cfd8e3; font-size:15px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; transition:.12s; }
-  .pad button small{ font-size:9px; color:var(--sub); }
-  .pad button:hover{ border-color:var(--accent); color:#fff; }
-  .pad button:active{ background:var(--accent); color:#fff; }
-  .pad .pc{ display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--sub); text-align:center; line-height:1.3; }
-  .slds{ display:flex; flex-direction:column; gap:12px; width:154px; }
-  .sld{ background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; transition:.12s; }
-  .sld label{ font-size:11px; color:var(--sub); display:block; margin-bottom:6px; } .sld label b{ color:#cfd8e3; font-family:monospace; }
-  .sld input{ width:100%; accent-color:var(--accent); }
+  .flightctl.locked{ opacity:.4; pointer-events:none; }
+  .manual .mbody{ display:flex; align-items:stretch; gap:14px; padding:14px 16px; }
+  /* 面板通用按钮 */
+  .mbtn{ background:var(--panel2); border:1px solid var(--line); border-radius:8px; color:#cfd8e3; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; transition:.12s; font-size:14px; }
+  .mbtn small{ font-size:9.5px; color:var(--sub); white-space:nowrap; }
+  .mbtn b{ font-size:15px; font-weight:600; }
+  .mbtn:hover{ border-color:var(--accent); color:#fff; }
+  .mbtn:active{ background:var(--accent); color:#fff; }
+  .mbtn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .mbtn.on small{ color:#dbe9ff; }
+
+  /* 飞机参数 */
+  .mtel{ width:292px; flex-shrink:0; }
+  .mtel .telttl{ font-size:12px; font-weight:600; color:#cfd8e3; margin-bottom:9px; }
+  .mtel .telgrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px 8px; }
+  .mtel .tk i{ display:block; font-style:normal; font-size:9.5px; color:var(--sub); margin-bottom:3px; white-space:nowrap; }
+  .mtel .tk b{ font-size:11.5px; font-weight:600; color:#e6ebf2; font-family:monospace; }
+  .mcollapse{ align-self:center; flex-shrink:0; width:26px; height:26px; border-radius:50%; border:1px solid var(--line);
+    background:var(--panel2); color:var(--sub); cursor:pointer; font-size:13px; line-height:1; }
+  .mcollapse:hover{ border-color:var(--accent); color:#fff; }
+  .manual.telfold .mtel{ display:none; }
+
+  /* 悬停 / 返航 / 飞行控制权 */
+  .mact{ display:flex; flex-direction:column; justify-content:center; gap:9px; width:132px; flex-shrink:0; }
+  .mact .mbtn{ height:34px; flex-direction:row; gap:6px; font-size:13px; }
+  .mact .rtl{ display:none; background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.5); color:#ff9b9b; }
+  .mact .rtl:hover{ background:rgba(239,68,68,.28); color:#fff; }
+  .manual.authed .mact .rtl{ display:flex; }
+  .manual .mauth{ display:flex; align-items:center; gap:9px; padding:0; border:0; }
+
+  /* 键盘飞行盘（开飞行控制权后出现） */
+  .mkeys{ display:none; flex-direction:column; gap:6px; flex-shrink:0; }
+  .manual.authed .mkeys{ display:flex; }
+  .krow{ display:flex; gap:6px; }
+  .krow .mbtn{ width:52px; height:44px; }
+  .mspd{ height:32px; font-size:13px; }
+
+  /* 云台 / 镜头 / 变焦 */
+  .mgim{ display:flex; flex-direction:column; gap:6px; margin-left:auto; flex-shrink:0; }
+  .gcross{ display:flex; gap:5px; align-items:flex-start; }
+  .gcross .mbtn{ width:58px; height:42px; }
+  .gcross .gside{ margin-top:22px; }
+  .gmid{ display:flex; flex-direction:column; gap:5px; }
+  .glens{ display:flex; gap:5px; }
+  .glens .mbtn{ width:58px; height:40px; }
+  .gzoom{ display:flex; gap:5px; flex-wrap:wrap; max-width:190px; }
+  .zbar{ display:flex; align-items:center; gap:2px; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:0 4px; height:40px; }
+  .zbar button{ background:none; border:0; color:#cfd8e3; cursor:pointer; font-size:13px; padding:2px 5px; display:flex; flex-direction:column; align-items:center; }
+  .zbar button small{ font-size:9px; color:var(--sub); }
+  .zbar button:hover{ color:var(--accent); }
+  .zbar .zval{ display:flex; flex-direction:column; align-items:center; min-width:38px; }
+  .zbar .zval b{ font-size:12px; color:var(--accent); font-family:monospace; }
+  .zbar .zval small{ font-size:9px; color:var(--sub); }
+  .zfast{ display:none; gap:5px; }
+  .manual.authed .zfast{ display:flex; }
+  .zfast .mbtn{ width:58px; height:40px; }
+  .greset{ width:58px; height:40px; }
+  .gcaption{ font-size:10px; color:var(--sub); text-align:right; }
+  .gcaption b{ color:#cfd8e3; font-family:monospace; }
+  /* 红外镜头：画面转伪彩 */
+  body.ir .vscene{ filter:invert(1) hue-rotate(150deg) saturate(1.6) contrast(1.1); }
   .lit{ box-shadow:0 0 0 2px var(--accent), 0 0 14px rgba(47,123,255,.6); border-color:var(--accent)!important; }
 
   /* 悬浮球 */
@@ -513,24 +563,81 @@
   <!-- 手动操控面板 -->
   <div class="manual" id="manual">
     <div class="mh">🕹 手动操控 <span class="mx" id="closeManual">×</span></div>
-    <div class="mauth">
-      <label class="swt"><input type="checkbox" id="flightAuth"><span class="track"></span></label>
-      <span class="authlbl">飞行控制权</span>
-    </div>
     <div class="mbody">
-      <div class="pad flightctl">
-        <div></div><button data-m="up:2" id="mUp">↑<small>上升</small></button><div></div>
-        <button data-m="yaw_l:15" id="mYawL">↺<small>左转</small></button><div class="pc">升降<br>偏航</div><button data-m="yaw_r:15" id="mYawR">↻<small>右转</small></button>
-        <div></div><button data-m="down:2" id="mDown">↓<small>下降</small></button><div></div>
+      <!-- 飞机参数：未取得飞行控制权时不回传，统一显示 -- -->
+      <div class="mtel" id="mtel">
+        <div class="telttl">飞机参数</div>
+        <div class="telgrid">
+          <div class="tk"><i>相对起飞点高度</i><b data-tel="alt">--</b></div>
+          <div class="tk"><i>海拔</i><b data-tel="asl">--</b></div>
+          <div class="tk"><i>电量</i><b data-tel="bat">--</b></div>
+          <div class="tk"><i>航向角度</i><b data-tel="hdg">--</b></div>
+          <div class="tk"><i>垂直速度</i><b data-tel="vs">--</b></div>
+          <div class="tk"><i>水平速度</i><b data-tel="hs">--</b></div>
+          <div class="tk"><i>剩余飞行时长</i><b data-tel="fly">--</b></div>
+          <div class="tk"><i>俯仰角度</i><b data-tel="pit">--</b></div>
+          <div class="tk"><i>返航高度</i><b data-tel="rh">--</b></div>
+          <div class="tk"><i>返航距离</i><b data-tel="rd">--</b></div>
+          <div class="tk"><i>GPS 坐标</i><b data-tel="gps">--</b></div>
+          <div class="tk"><i>滚转角度</i><b data-tel="rol">--</b></div>
+        </div>
       </div>
-      <div class="slds">
-        <div class="sld" id="sldGim"><label>云台俯仰 <b id="mGimVal">0°</b></label><input type="range" id="mGim" min="-90" max="30" value="0"></div>
-        <div class="sld" id="sldZoom"><label>变焦 <b id="mZoomVal">1.0x</b></label><input type="range" id="mZoom" min="10" max="160" value="10"></div>
+      <button class="mcollapse" id="mCollapse" title="收起 / 展开飞机参数">›</button>
+
+      <div class="mact">
+        <button class="mbtn hover" id="mHover">⏸ 悬停</button>
+        <button class="mbtn rtl" id="mRtl">🛬 返航</button>
+        <div class="mauth">
+          <span class="authlbl">飞行控制权</span>
+          <label class="swt"><input type="checkbox" id="flightAuth"><span class="track"></span></label>
+        </div>
       </div>
-      <div class="pad flightctl">
-        <div></div><button data-m="forward:2" id="mFwd">▲<small>前进</small></button><div></div>
-        <button data-m="left:2" id="mLeft">◀<small>左移</small></button><div class="pc">前后<br>左右</div><button data-m="right:2" id="mRight">▶<small>右移</small></button>
-        <div></div><button data-m="back:2" id="mBack">▼<small>后退</small></button><div></div>
+
+      <!-- 键盘飞行盘：取得飞行控制权后才出现 -->
+      <div class="mkeys flightctl">
+        <div class="krow">
+          <button class="mbtn" data-m="yaw_l:15"><b>Q</b><small>↰ 左转</small></button>
+          <button class="mbtn" data-m="forward:2"><b>W</b><small>∧ 前进</small></button>
+          <button class="mbtn" data-m="yaw_r:15"><b>E</b><small>↱ 右转</small></button>
+          <button class="mbtn" data-m="down:2"><b>C</b><small>⇩ 下降</small></button>
+        </div>
+        <div class="krow">
+          <button class="mbtn" data-m="left:2"><b>A</b><small>‹ 左移</small></button>
+          <button class="mbtn" data-m="back:2"><b>S</b><small>∨ 后退</small></button>
+          <button class="mbtn" data-m="right:2"><b>D</b><small>› 右移</small></button>
+          <button class="mbtn" data-m="up:2"><b>Z</b><small>⇧ 上升</small></button>
+        </div>
+        <button class="mbtn mspd" id="mSpd">高速[X]</button>
+      </div>
+
+      <!-- 云台 / 镜头 / 变焦：叠加操作，不需要飞行控制权 -->
+      <div class="mgim">
+        <div class="gcross">
+          <button class="mbtn gside" id="gL">◀<small>云台向左</small></button>
+          <div class="gmid">
+            <button class="mbtn" id="gU">▲<small>云台向上</small></button>
+            <button class="mbtn" id="gD">▼<small>云台向下</small></button>
+          </div>
+          <button class="mbtn gside" id="gR">▶<small>云台向右</small></button>
+        </div>
+        <div class="glens">
+          <button class="mbtn lens on" data-lens="广角镜头"><b>1</b><small>广角镜头</small></button>
+          <button class="mbtn lens" data-lens="变焦镜头"><b>2</b><small>变焦镜头</small></button>
+          <button class="mbtn lens" data-lens="红外镜头"><b>3</b><small>红外镜头</small></button>
+        </div>
+        <div class="gzoom">
+          <div class="zbar">
+            <button id="zOut">«<small>缩小</small></button>
+            <div class="zval"><b id="mZoomVal">1.0X</b><small>变焦</small></div>
+            <button id="zIn">»<small>放大</small></button>
+          </div>
+          <div class="zfast">
+            <button class="mbtn" id="zOutF">《<small>更快缩小</small></button>
+            <button class="mbtn" id="zInF">》<small>更快放大</small></button>
+          </div>
+          <button class="mbtn greset" id="gReset">⟳<small>云台重置</small></button>
+        </div>
+        <div class="gcaption">云台俯仰 <b id="mGimVal">0°</b></div>
       </div>
     </div>
   </div>
@@ -608,6 +715,6 @@
   <div class="toast" id="toast"></div>
 </div>
 
-<script src="pilot-simple.js?v=20260826pf3"></script>
+<script src="pilot-simple.js?v=20260826pad1"></script>
 </body>
 </html>

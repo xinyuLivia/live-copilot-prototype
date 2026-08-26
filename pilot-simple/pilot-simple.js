@@ -570,12 +570,7 @@ function addDispRecord(ok){
 /* ============ 指点飞行任务演示 ============
    飞往目标点途中不提供智能体入口；到点悬停后才可下指令。
    到点悬停下执行完成不出现【恢复航线】与 5 秒倒计时，无人机保持悬停。 */
-let pfTimer=null, pfTip=null;
-function setPfTip(txt){
-  if(!pfTip){ pfTip=document.createElement('div'); pfTip.className='pftip'; $('#videoArea').appendChild(pfTip); }
-  pfTip.textContent=txt;
-}
-function clearPfTip(){ if(pfTip){ pfTip.remove(); pfTip=null; } }
+let pfTimer=null;
 function setTaskCard(nm, st1, st2){
   $('#taskNm').textContent=nm+'…'; $('#taskNm2').textContent=nm;
   $('#taskSt1').textContent=st1; $('#taskSt2').textContent=st2;
@@ -593,7 +588,6 @@ function startPointFly(){
   flightAuth.checked=false; updateFlightLock();
   setTaskCard('K12+300 临时指点飞行任务','飞往目标点…','到点悬停');
   setSource('pf');
-  setPfTip('指点飞行任务 · 飞往目标点途中，暂不提供实况智能体入口');
   toast('已切换为指点飞行任务，正在飞往目标点');
   boost(6000);
   clearTimeout(pfTimer);
@@ -605,7 +599,6 @@ function pointFlyArrived(){
   applyAction('hover');
   setSource('pfhover');
   setTaskCard('K12+300 临时指点飞行任务','已到达目标点 · 悬停中','到点悬停');
-  setPfTip('已到达目标点并悬停 · 可打开实况智能体下达操控指令');
   toast('已到达目标点并悬停，实况智能体入口已开放');
   addBot('已到达目标点并<b>悬停</b>。<br>本次是指点飞行任务，没有航线可暂停，你的指令我会直接在目标点执行；执行完成后无人机继续悬停，<b>不会出现【恢复航线】</b>。<br>结束本次临时任务请用左侧【一键返航】。');
   fab.classList.add('pulse');
@@ -617,7 +610,6 @@ function endPointFly(silent){
   clearTimeout(pfTimer);
   pointfly=false;
   document.body.classList.remove('pf-flying');
-  clearPfTip();
   setTaskCard('景区门口大道巡检任务2026','执行中…','返航');
   setSource('auto');
   if(!silent) toast('临时任务已结束，已回到航线巡检任务');

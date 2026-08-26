@@ -234,6 +234,10 @@
   .car.c3{ width:34px; top:72%; right:-8%; animation:run2 4.6s linear infinite .5s; background:#c2b28f; }
   @keyframes run1{ from{transform:translateX(0) scale(.7);opacity:.5;} to{transform:translateX(60vw) scale(1.25);opacity:1;} }
   @keyframes run2{ from{transform:translateX(0) scale(.7);opacity:.5;} to{transform:translateX(-60vw) scale(1.25);opacity:1;} }
+  /* 悬停 / 暂停时道路画面静止；仅航线飞行或临时位移（boost）时播放 */
+  .sky,.ground,.lane,.bl-left,.bl-right,.car.c1,.car.c2,.car.c3{ animation-play-state:paused; }
+  body.scene-fly .sky,body.scene-fly .ground,body.scene-fly .lane,
+  body.scene-fly .bl-left,body.scene-fly .bl-right,body.scene-fly .car.c1,body.scene-fly .car.c2,body.scene-fly .car.c3{ animation-play-state:running; }
 
   .hud{ position:absolute; inset:0; pointer-events:none; z-index:6; }
   .cross{ position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); width:44px; height:44px; border:1px solid rgba(120,180,255,.5); border-radius:50%; }
@@ -715,6 +719,6 @@
   <div class="toast" id="toast"></div>
 </div>
 
-<script src="pilot-simple.js?v=20260826pad1"></script>
+<script src="pilot-simple.js?v=20260826scene1"></script>
 </body>
 </html>

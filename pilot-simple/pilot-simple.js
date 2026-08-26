@@ -27,6 +27,12 @@ function setSource(s){
              pf:['指点飞行任务执行中','src-pf'], pfhover:['指点飞行 · 到点悬停','src-pfhover']};
   const b=$('#srcBadge'); b.textContent=map[s][0]; b.className='srcbadge '+map[s][1];
   document.body.classList.toggle('aictrl', s==='ai'||s==='mdisposeAI');   // AI 操控时锁定手动面板
+  syncSceneFly();
+}
+/* 道路画面：航线自动飞或指点飞行途中才动；悬停 / 暂停 / 操控 / 处置时静止 */
+function syncSceneFly(){
+  const fly = cur==='auto' || (cur==='pf' && document.body.classList.contains('pf-flying'));
+  document.body.classList.toggle('scene-fly', fly);
 }
 
 /* ---------- 面板开关 ---------- */
@@ -157,7 +163,15 @@ function applyScene(){
   vscene.style.transform = `scale(${st.zoom}) translateY(${pan}%)`;
 }
 function setSpd(v){ st.spd=v; }
-function boost(ms){ document.body.classList.add('boost'); setSpd(4.5); setTimeout(()=>{ document.body.classList.remove('boost'); setSpd(0.0); }, ms||1900); }
+function boost(ms){
+  document.body.classList.add('boost','scene-fly');   // 临时位移时短暂播放道路动画
+  setSpd(4.5);
+  setTimeout(()=>{
+    document.body.classList.remove('boost');
+    setSpd(0.0);
+    syncSceneFly();                                   // 位移结束回到悬停则画面再停
+  }, ms||1900);
+}
 function applyAction(kind,n){
   switch(kind){
     case 'forward': flash('▲ 向前 '+n+'m'); boost(); break;
@@ -821,4 +835,4 @@ setInterval(()=>{
   $('#taskRt').textContent=t; $('#evRt').textContent='任务执行中 '+t;
 },1000);
 
-renderChips(); refreshHud();
+renderChips(); refreshHud(); syncSceneFly();         // 初始为航线自动，道路画面播放
